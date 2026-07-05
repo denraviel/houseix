@@ -1,0 +1,25 @@
+{% extends 'base.html' %} {% load crispy_forms_tags %} {% block title %}Complete
+Account Setup - HouseIX Ops{% endblock %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-primary">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">Complete Account Setup</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-muted">
+          This is your first login. Update your username, email address, and
+          password before accessing the system.
+        </p>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %} {{ form|crispy }}
+          <button type="submit" class="btn btn-primary">Complete Setup</button>
+          <a href="{% url 'logout' %}" class="btn btn-outline-secondary"
+            >Log Out</a
+          >
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

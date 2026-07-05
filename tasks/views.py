@@ -108,6 +108,7 @@ def task_create(request):
             if task.status in [Task.STATUS_COMPLETED, Task.STATUS_READY_FOR_REVIEW] and task.completed_at is None:
                 task.completed_at = timezone.now()
             task.save()
+            form.save_m2m()
             AuditLog.log(request.user, 'task_assigned', f"Assigned task {task.title} to {task.assigned_to.email}")
             messages.success(request, 'Task created successfully.')
             return redirect('task_list')
@@ -128,6 +129,7 @@ def task_update(request, pk):
             if updated_task.status in [Task.STATUS_COMPLETED, Task.STATUS_READY_FOR_REVIEW] and updated_task.completed_at is None:
                 updated_task.completed_at = timezone.now()
             updated_task.save()
+            form.save_m2m()
             AuditLog.log(request.user, 'task_updated', f"Updated task {task.title}")
             messages.success(request, 'Task updated successfully.')
             return redirect('task_list')

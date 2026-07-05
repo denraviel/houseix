@@ -23,24 +23,45 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto">
-            {% if user.is_authenticated %}
-              {% for item in navigation_menu %}
-              <li class="nav-item">
-                <a class="nav-link" href="{{ item.url }}">{{ item.label }}</a>
-              </li>
-              {% endfor %}
-            {% endif %}
+            {% if user.is_authenticated %} {% for item in navigation_menu %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ item.url }}">{{ item.label }}</a>
+            </li>
+            {% endfor %} {% endif %}
           </ul>
 
-          <ul class="navbar-nav">
+          <ul class="navbar-nav align-items-lg-center gap-lg-2">
             {% if user.is_authenticated %}
             <li class="nav-item">
-              <span class="nav-link text-light"
-                >Welcome, {{ user.full_name }}</span
+              <span class="nav-link text-light mb-0"
+                >Welcome, {{ user.effective_display_name }}</span
               >
             </li>
+            {% if not user.is_first_login %}
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+              <a
+                class="btn btn-outline-light btn-sm"
+                href="{% url 'profile' %}"
+              >
+                Profile
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                class="btn btn-outline-light btn-sm"
+                href="{% url 'account_settings' %}"
+              >
+                Settings
+              </a>
+            </li>
+            {% endif %}
+            <li class="nav-item">
+              <form method="post" action="{% url 'logout' %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-light btn-sm">
+                  Logout
+                </button>
+              </form>
             </li>
             {% else %}
             <li class="nav-item">

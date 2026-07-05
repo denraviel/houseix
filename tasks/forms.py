@@ -24,7 +24,6 @@ class TaskForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        required_positions = None
         if self.is_bound:
             required_position_ids = [value for value in self.data.getlist('required_positions') if value.isdigit()]
             if required_position_ids:
@@ -34,8 +33,10 @@ class TaskForm(forms.ModelForm):
             else:
                 self.fields['assigned_to'].queryset = TaskAssignmentService.assignment_candidates()
         else:
-            required_positions = getattr(self.instance, 'required_positions', None)
-            self.fields['assigned_to'].queryset = TaskAssignmentService.assignment_candidates(required_positions=required_positions)
+            required_positions = self.instance.required_positions.all() if self.instance.pk else None
+            self.fields['assigned_to'].queryset = TaskAssignmentService.assignment_candidates(
+                required_positions=required_positions
+            )
         self.fields['required_positions'].required = False
         self.fields['required_positions'].help_text = 'Optional. Users with at least one matching position can be assigned.'
         self.fields['assigned_to'].help_text = 'Only staff matching at least one required position can be assigned.'

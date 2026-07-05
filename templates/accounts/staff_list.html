@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}Staff Management - HouseIX Ops{% endblock %}
 
@@ -11,15 +11,17 @@
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-striped table-hover">
+            <table class="table table-striped table-hover align-middle">
                 <thead>
                     <tr>
                         <th>Full Name</th>
+                        <th>Username</th>
                         <th>Email</th>
                         <th>Phone Number</th>
                         <th>Role</th>
-                        <th>Position</th>
+                        <th>Positions</th>
                         <th>Status</th>
+                        <th>Onboarding</th>
                         <th>Date Joined</th>
                         <th>Actions</th>
                     </tr>
@@ -28,24 +30,16 @@
                     {% for staff in staff_list %}
                     <tr>
                         <td>{{ staff.full_name }}</td>
+                        <td>{{ staff.username|default:"-" }}</td>
                         <td>{{ staff.email }}</td>
                         <td>{{ staff.phone_number }}</td>
+                        <td><span class="badge bg-secondary">{{ staff.get_role_display }}</span></td>
                         <td>
-                            <span class="badge bg-secondary">{{ staff.get_role_display }}</span>
-                        </td>
-                        <td>
-                            {% with positions=staff.positions.all %}
-                            {% if positions %}
+                            {% if staff.position_names %}
                             <div>{{ staff.position_names|join:", " }}</div>
-                            <div class="small text-muted">
-                                {% for position in positions %}
-                                    {{ position.get_department_display }}{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
-                            </div>
                             {% else %}
                             <span class="text-muted">-</span>
                             {% endif %}
-                            {% endwith %}
                         </td>
                         <td>
                             {% if staff.is_active %}
@@ -54,9 +48,19 @@
                             <span class="badge bg-danger">Inactive</span>
                             {% endif %}
                         </td>
+                        <td>
+                            {% if staff.is_first_login %}
+                            <span class="badge bg-warning text-dark">Setup Required</span>
+                            {% else %}
+                            <span class="badge bg-success">Completed</span>
+                            {% endif %}
+                        </td>
                         <td>{{ staff.date_joined|date:"M d, Y" }}</td>
                         <td>
                             <a href="{% url 'staff_edit' staff.pk %}" class="btn btn-sm btn-warning me-1">Edit</a>
+                            {% if user.role == 'owner' or user.role == 'admin' %}
+                            <a href="{% url 'staff_reset_password' staff.pk %}" class="btn btn-sm btn-outline-secondary me-1">Reset Password</a>
+                            {% endif %}
                             <a href="{% url 'toggle_staff_active' staff.pk %}" class="btn btn-sm btn-{% if staff.is_active %}danger{% else %}success{% endif %} me-1">
                                 {% if staff.is_active %}Deactivate{% else %}Activate{% endif %}
                             </a>
@@ -67,7 +71,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center">No staff members found.</td>
+                        <td colspan="10" class="text-center">No staff members found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

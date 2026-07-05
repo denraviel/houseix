@@ -1,4 +1,4 @@
-from .services import NavigationService
+from .services import AccountOnboardingService, NavigationService
 
 
 def navigation_context(request):
@@ -8,6 +8,13 @@ def navigation_context(request):
             'navigation_menu': [],
             'accessible_modules': set(),
             'dashboard_title': '',
+            'dashboard_widgets': [],
+        }
+    if AccountOnboardingService.requires_onboarding(user):
+        return {
+            'navigation_menu': [],
+            'accessible_modules': set(),
+            'dashboard_title': 'Complete Account Setup',
             'dashboard_widgets': [],
         }
     return {

@@ -5,14 +5,25 @@ from .models import ActivityLog, AuditLog, CustomUser, JobPosition
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    list_display = ('email', 'full_name', 'phone_number', 'role', 'position_summary', 'is_staff', 'is_superuser')
-    list_filter = ('role', 'positions__department', 'positions', 'is_staff', 'is_superuser')
-    search_fields = ('email', 'full_name', 'phone_number', 'positions__name', 'positions__code')
+    list_display = (
+        'email',
+        'username',
+        'full_name',
+        'phone_number',
+        'role',
+        'position_summary',
+        'is_first_login',
+        'is_staff',
+        'is_superuser',
+    )
+    list_filter = ('role', 'is_first_login', 'email_verified', 'positions__department', 'positions', 'is_staff', 'is_superuser')
+    search_fields = ('email', 'username', 'full_name', 'phone_number', 'positions__name', 'positions__code')
     ordering = ('email',)
 
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Personal Info', {'fields': ('full_name', 'phone_number', 'positions')}),
+        (None, {'fields': ('email', 'username', 'password')}),
+        ('Personal Info', {'fields': ('full_name', 'display_name', 'phone_number', 'profile_photo', 'positions')}),
+        ('Account Security', {'fields': ('is_first_login', 'email_verified', 'password_changed_at')}),
         ('Permissions', {'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
@@ -20,7 +31,7 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'full_name', 'phone_number', 'role', 'positions', 'password1', 'password2'),
+            'fields': ('email', 'username', 'full_name', 'display_name', 'phone_number', 'role', 'positions', 'password1', 'password2'),
         }),
     )
 

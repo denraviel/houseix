@@ -1,6 +1,12 @@
-from django.urls import NoReverseMatch, reverse
+import secrets
 
-from .models import JobPosition
+from django.contrib.auth import password_validation
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
+
+from .models import AuditLog, CustomUser, JobPosition
 
 
 class NavigationService:
@@ -65,6 +71,7 @@ class NavigationService:
         'staff_list': MODULE_STAFF_MANAGEMENT,
         'staff_create': MODULE_STAFF_MANAGEMENT,
         'staff_edit': MODULE_STAFF_MANAGEMENT,
+        'staff_reset_password': MODULE_STAFF_MANAGEMENT,
         'staff_delete': MODULE_STAFF_MANAGEMENT,
         'toggle_staff_active': MODULE_STAFF_MANAGEMENT,
         'product_list': MODULE_PRODUCTS,
@@ -335,3 +342,204 @@ class NavigationService:
                 }
             )
         return widgets[:6]
+
+
+class AccountProfileService:
+    @staticmethod
+    def normalize_username(username):
+        return (username or '').strip().lower()
+
+    @staticmethod
+    def normalize_email(email):
+        return (email or '').strip().lower()
+
+    @classmethod
+    def validate_username(cls, *, username, user=None):
+        username = cls.normalize_username(username)
+        if not username:
+            raise ValidationError('Username is required.')
+        CustomUser._meta.get_field('username').run_validators(username)
+        queryset = CustomUser.objects.exclude(pk=getattr(user, 'pk', None)).filter(username__iexact=username)
+        if queryset.exists():
+            raise ValidationError('This username is already in use.')
+        return username
+
+    @classmethod
+    def validate_email(cls, *, email, user=None):
+        email = cls.normalize_email(email)
+        if not email:
+            raise ValidationError('Email address is required.')
+        queryset = CustomUser.objects.exclude(pk=getattr(user, 'pk', None)).filter(email__iexact=email)
+        if queryset.exists():
+            raise ValidationError('This email address is already in use.')
+        return email
+
+    @classmethod
+    @transaction.atomic
+    def update_profile(cls, *, user, cleaned_data):
+        previous_email = user.email
+        previous_username = user.username
+        previous_photo = bool(user.profile_photo)
+
+        if 'display_name' in cleaned_data:
+            user.display_name = cleaned_data.get('display_name', '').strip()
+        if 'phone_number' in cleaned_data:
+            user.phone_number = (cleaned_data.get('phone_number') or '').strip()
+        if 'profile_photo' in cleaned_data and cleaned_data.get('profile_photo'):
+            user.profile_photo = cleaned_data['profile_photo']
+        if 'username' in cleaned_data:
+            user.username = cls.validate_username(username=cleaned_data.get('username'), user=user)
+        if 'email' in cleaned_data:
+            user.email = cls.validate_email(email=cleaned_data.get('email'), user=user)
+        user.save()
+
+        AuditLog.log(user, 'profile_updated', f'Updated profile for {user.email}.')
+        if previous_photo != bool(user.profile_photo):
+            AuditLog.log(user, 'profile_photo_updated', f'Updated profile photo for {user.email}.')
+        if previous_email != user.email:
+            AuditLog.log(user, 'email_changed', f'Changed email address for {user.full_name}.')
+        if previous_username != user.username:
+            AuditLog.log(user, 'username_changed', f'Changed username for {user.full_name}.')
+        return user
+
+    @classmethod
+    def update_email(cls, *, user, email):
+        user.email = cls.validate_email(email=email, user=user)
+        user.save(update_fields=['email'])
+        AuditLog.log(user, 'email_changed', f'Changed email address for {user.full_name}.')
+        return user
+
+    @classmethod
+    def update_username(cls, *, user, username):
+        user.username = cls.validate_username(username=username, user=user)
+        user.save(update_fields=['username'])
+        AuditLog.log(user, 'username_changed', f'Changed username for {user.full_name}.')
+        return user
+
+
+class AccountSecurityService:
+    TEMP_PASSWORD_SPECIALS = '!@#$%&*?'
+
+    @classmethod
+    def generate_temporary_password(cls, length=12):
+        alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+        password = [
+            secrets.choice('ABCDEFGHJKLMNPQRSTUVWXYZ'),
+            secrets.choice('abcdefghijkmnopqrstuvwxyz'),
+            secrets.choice('23456789'),
+            secrets.choice(cls.TEMP_PASSWORD_SPECIALS),
+        ]
+        while len(password) < length:
+            password.append(secrets.choice(alphabet + cls.TEMP_PASSWORD_SPECIALS))
+        secrets.SystemRandom().shuffle(password)
+        return ''.join(password)
+
+    @staticmethod
+    def validate_password(*, password, user):
+        password_validation.validate_password(password, user=user)
+        return password
+
+    @classmethod
+    def set_password(cls, *, user, password, actor=None, first_login_required=False):
+        cls.validate_password(password=password, user=user)
+        user.set_password(password)
+        user.password_changed_at = timezone.now()
+        user.is_first_login = first_login_required
+        user.save(update_fields=['password', 'password_changed_at', 'is_first_login'])
+        AuditLog.log(actor or user, 'password_changed', f'Updated password for {user.email}.')
+        return user
+
+    @classmethod
+    def reset_password(cls, *, user, actor):
+        temporary_password = cls.generate_temporary_password()
+        user.set_password(temporary_password)
+        user.is_first_login = True
+        user.password_changed_at = timezone.now()
+        user.save(update_fields=['password', 'is_first_login', 'password_changed_at'])
+        AuditLog.log(actor, 'password_reset', f'Reset password for {user.email}.')
+        return temporary_password
+
+
+class AccountOnboardingService:
+    @staticmethod
+    def requires_onboarding(user):
+        return bool(getattr(user, 'is_authenticated', False) and getattr(user, 'is_first_login', False))
+
+    @staticmethod
+    def onboarding_exempt_url_names():
+        return {
+            'login',
+            'logout',
+            'first_login_setup',
+        }
+
+    @staticmethod
+    def get_post_login_redirect_url(user):
+        return reverse(NavigationService.get_dashboard_url_name(user))
+
+    @classmethod
+    @transaction.atomic
+    def create_staff_account(cls, *, cleaned_data, actor):
+        user = CustomUser(
+            full_name=cleaned_data['full_name'].strip(),
+            display_name=(cleaned_data.get('display_name') or '').strip(),
+            username=AccountProfileService.validate_username(username=cleaned_data['username']),
+            email=AccountProfileService.validate_email(email=cleaned_data['email']),
+            phone_number=(cleaned_data.get('phone_number') or '').strip(),
+            role=cleaned_data['role'],
+            is_active=True,
+            is_first_login=True,
+            email_verified=False,
+        )
+        password = cleaned_data['password1']
+        AccountSecurityService.validate_password(password=password, user=user)
+        user.set_password(password)
+        user.password_changed_at = timezone.now()
+        user.save()
+        user.positions.set(cleaned_data.get('positions') or [])
+        AuditLog.log(actor, 'user_created', f'Created user {user.email} ({user.role}).')
+        return user
+
+    @classmethod
+    @transaction.atomic
+    def update_staff_account(cls, *, user, cleaned_data, actor):
+        user.full_name = cleaned_data['full_name'].strip()
+        user.display_name = (cleaned_data.get('display_name') or '').strip()
+        user.username = AccountProfileService.validate_username(username=cleaned_data['username'], user=user)
+        user.email = AccountProfileService.validate_email(email=cleaned_data['email'], user=user)
+        user.phone_number = (cleaned_data.get('phone_number') or '').strip()
+        user.role = cleaned_data['role']
+        user.is_active = cleaned_data['is_active']
+        user.save()
+        user.positions.set(cleaned_data.get('positions') or [])
+        AuditLog.log(actor, 'user_edited', f'Edited user {user.email} ({user.role}).')
+        return user
+
+    @classmethod
+    @transaction.atomic
+    def complete_first_login(cls, *, user, cleaned_data):
+        previous_email = user.email
+        previous_username = user.username
+        previous_photo = bool(user.profile_photo)
+        user.display_name = (cleaned_data.get('display_name') or '').strip()
+        user.phone_number = (cleaned_data.get('phone_number') or '').strip()
+        if cleaned_data.get('profile_photo'):
+            user.profile_photo = cleaned_data['profile_photo']
+        user.username = AccountProfileService.validate_username(username=cleaned_data['username'], user=user)
+        user.email = AccountProfileService.validate_email(email=cleaned_data['email'], user=user)
+        new_password = cleaned_data['new_password1']
+        AccountSecurityService.validate_password(password=new_password, user=user)
+        user.set_password(new_password)
+        user.is_first_login = False
+        user.password_changed_at = timezone.now()
+        user.save()
+        AuditLog.log(user, 'profile_updated', f'Updated onboarding profile for {user.email}.')
+        if previous_photo != bool(user.profile_photo):
+            AuditLog.log(user, 'profile_photo_updated', f'Updated profile photo for {user.email}.')
+        if previous_email != user.email:
+            AuditLog.log(user, 'email_changed', f'Changed email address for {user.full_name}.')
+        if previous_username != user.username:
+            AuditLog.log(user, 'username_changed', f'Changed username for {user.full_name}.')
+        AuditLog.log(user, 'password_changed', f'Updated password for {user.email}.')
+        AuditLog.log(user, 'first_login_completed', f'Completed first login setup for {user.email}.')
+        return user

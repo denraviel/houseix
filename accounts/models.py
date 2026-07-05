@@ -1,5 +1,13 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.validators import RegexValidator
 from django.db import models
+from django.utils import timezone
+
+
+username_validator = RegexValidator(
+    regex=r'^[A-Za-z0-9._]+$',
+    message='Username may contain only letters, numbers, periods, and underscores.',
+)
 
 
 class CustomUserManager(BaseUserManager):
@@ -8,9 +16,15 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('The Email field must be set')
         positions = extra_fields.pop('positions', None)
         legacy_position = extra_fields.pop('position', None)
+        extra_fields.setdefault('is_first_login', False)
         email = self.normalize_email(email)
+        username = extra_fields.get('username')
+        if username:
+            extra_fields['username'] = username.strip().lower()
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
+        if password:
+            user.password_changed_at = timezone.now()
         user.save(using=self._db)
         if positions is not None:
             user.positions.set(positions)
@@ -21,6 +35,7 @@ class CustomUserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_first_login', False)
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
@@ -99,11 +114,22 @@ class CustomUser(AbstractUser):
         ('manager', 'Manager'),
         ('staff', 'Staff'),
     )
-    username = None
+    username = models.CharField(
+        max_length=150,
+        unique=True,
+        null=True,
+        blank=True,
+        validators=[username_validator],
+    )
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255)
+    display_name = models.CharField(max_length=255, blank=True)
     phone_number = models.CharField(max_length=20)
+    profile_photo = models.ImageField(upload_to='profiles/%Y/%m/', blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='staff')
+    is_first_login = models.BooleanField(default=True)
+    password_changed_at = models.DateTimeField(null=True, blank=True)
+    email_verified = models.BooleanField(default=False)
     positions = models.ManyToManyField(
         JobPosition,
         blank=True,
@@ -116,7 +142,14 @@ class CustomUser(AbstractUser):
     objects = CustomUserManager()
 
     def __str__(self):
-        return self.email
+        return self.display_name or self.full_name or self.email
+
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.strip().lower()
+        if self.username:
+            self.username = self.username.strip().lower()
+        return super().save(*args, **kwargs)
 
     def _ordered_positions(self):
         cached_positions = getattr(self, '_prefetched_objects_cache', {}).get('positions')
@@ -141,12 +174,23 @@ class CustomUser(AbstractUser):
         primary_position = self.position
         return primary_position.name if primary_position else ''
 
+    @property
+    def effective_display_name(self):
+        return self.display_name or self.full_name or self.email
+
 
 class AuditLog(models.Model):
     ACTION_CHOICES = (
         ('user_created', 'User Created'),
         ('user_edited', 'User Edited'),
         ('user_status_changed', 'User Status Changed'),
+        ('first_login_completed', 'First Login Completed'),
+        ('username_changed', 'Username Changed'),
+        ('email_changed', 'Email Changed'),
+        ('password_changed', 'Password Changed'),
+        ('password_reset', 'Password Reset by Admin'),
+        ('profile_updated', 'Profile Updated'),
+        ('profile_photo_updated', 'Profile Picture Updated'),
         ('product_created', 'Product Created'),
         ('product_updated', 'Product Updated'),
         ('product_deleted', 'Product Deleted'),

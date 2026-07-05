@@ -1,21 +1,33 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, FormView, TemplateView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models
 from django.db.utils import OperationalError
-from .forms import CustomLoginForm, StaffForm, StaffUpdateForm
+from .forms import (
+    AdminResetPasswordForm,
+    ChangeEmailForm,
+    ChangeUsernameForm,
+    CustomLoginForm,
+    CustomPasswordChangeForm,
+    FirstLoginSetupForm,
+    ProfileUpdateForm,
+    StaffForm,
+    StaffUpdateForm,
+)
 from .models import CustomUser
 from .permissions import OperationalModuleAccessMixin
-from .services import NavigationService
+from .services import AccountOnboardingService, AccountProfileService, AccountSecurityService, NavigationService
 
 
 def home(request):
     if request.user.is_authenticated:
+        if AccountOnboardingService.requires_onboarding(request.user):
+            return redirect('first_login_setup')
         if request.user.role in ['owner', 'admin', 'manager']:
             return redirect('admin_dashboard')
         else:
@@ -97,11 +109,12 @@ class StaffCreateView(OperationalModuleAccessMixin, AdminRequiredMixin, CreateVi
         if form.cleaned_data.get('role') not in allowed_roles:
             messages.error(self.request, 'You are not authorized to create this type of user.')
             return redirect('staff_list')
-        response = super().form_valid(form)
+        self.object = AccountOnboardingService.create_staff_account(
+            cleaned_data=form.cleaned_data,
+            actor=self.request.user,
+        )
         messages.success(self.request, 'Staff account created successfully!')
-        from .models import AuditLog
-        AuditLog.log(self.request.user, 'user_created', f"Created user {self.object.email} ({self.object.role})")
-        return response
+        return redirect(self.get_success_url())
 
 
 class StaffUpdateView(OperationalModuleAccessMixin, AdminRequiredMixin, UpdateView):
@@ -126,11 +139,13 @@ class StaffUpdateView(OperationalModuleAccessMixin, AdminRequiredMixin, UpdateVi
         if form.cleaned_data.get('role') not in allowed_roles:
             messages.error(self.request, 'You are not authorized to set this role.')
             return redirect('staff_list')
-        response = super().form_valid(form)
+        self.object = AccountOnboardingService.update_staff_account(
+            user=self.object,
+            cleaned_data=form.cleaned_data,
+            actor=self.request.user,
+        )
         messages.success(self.request, 'Staff details updated successfully!')
-        from .models import AuditLog
-        AuditLog.log(self.request.user, 'user_edited', f"Edited user {self.object.email} ({self.object.role})")
-        return response
+        return redirect(self.get_success_url())
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -308,3 +323,146 @@ def employee_dashboard(request):
         'category': category,
     }
     return render(request, 'accounts/employee_dashboard.html', context)
+
+
+class ProfileView(LoginRequiredMixin, DetailView):
+    model = CustomUser
+    template_name = 'accounts/profile/profile.html'
+    context_object_name = 'profile_user'
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+
+class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+    model = CustomUser
+    form_class = ProfileUpdateForm
+    template_name = 'accounts/profile/edit_profile.html'
+    success_url = reverse_lazy('profile')
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def form_valid(self, form):
+        AccountProfileService.update_profile(user=self.request.user, cleaned_data=form.cleaned_data)
+        messages.success(self.request, 'Profile updated successfully.')
+        return redirect(self.get_success_url())
+
+
+class AccountSettingsView(LoginRequiredMixin, TemplateView):
+    template_name = 'accounts/profile/account_settings.html'
+
+
+class ChangePasswordView(LoginRequiredMixin, FormView):
+    template_name = 'accounts/profile/change_password.html'
+    form_class = CustomPasswordChangeForm
+    success_url = reverse_lazy('account_settings')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        AccountSecurityService.set_password(
+            user=self.request.user,
+            password=form.cleaned_data['new_password1'],
+            actor=self.request.user,
+            first_login_required=False,
+        )
+        update_session_auth_hash(self.request, self.request.user)
+        messages.success(self.request, 'Password changed successfully.')
+        return redirect(self.get_success_url())
+
+
+class ChangeEmailView(LoginRequiredMixin, FormView):
+    template_name = 'accounts/profile/change_email.html'
+    form_class = ChangeEmailForm
+    success_url = reverse_lazy('account_settings')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def get_initial(self):
+        return {'email': self.request.user.email}
+
+    def form_valid(self, form):
+        AccountProfileService.update_email(user=self.request.user, email=form.cleaned_data['email'])
+        messages.success(self.request, 'Email address updated successfully.')
+        return redirect(self.get_success_url())
+
+
+class ChangeUsernameView(LoginRequiredMixin, FormView):
+    template_name = 'accounts/profile/change_username.html'
+    form_class = ChangeUsernameForm
+    success_url = reverse_lazy('account_settings')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def get_initial(self):
+        return {'username': self.request.user.username}
+
+    def form_valid(self, form):
+        AccountProfileService.update_username(user=self.request.user, username=form.cleaned_data['username'])
+        messages.success(self.request, 'Username updated successfully.')
+        return redirect(self.get_success_url())
+
+
+class FirstLoginSetupView(LoginRequiredMixin, FormView):
+    template_name = 'accounts/profile/first_login_setup.html'
+    form_class = FirstLoginSetupForm
+
+    def dispatch(self, request, *args, **kwargs):
+        if not AccountOnboardingService.requires_onboarding(request.user):
+            return redirect('home')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def get_initial(self):
+        return {
+            'email': self.request.user.email,
+            'username': self.request.user.username,
+            'phone_number': self.request.user.phone_number,
+            'display_name': self.request.user.display_name,
+        }
+
+    def form_valid(self, form):
+        AccountOnboardingService.complete_first_login(user=self.request.user, cleaned_data=form.cleaned_data)
+        update_session_auth_hash(self.request, self.request.user)
+        messages.success(self.request, 'Account setup completed successfully.')
+        return redirect(AccountOnboardingService.get_post_login_redirect_url(self.request.user))
+
+
+class ResetPasswordView(OwnerAdminRequiredMixin, FormView):
+    template_name = 'accounts/profile/reset_password.html'
+    form_class = AdminResetPasswordForm
+    success_url = reverse_lazy('staff_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        self.target_user = get_object_or_404(CustomUser, pk=self.kwargs['pk'])
+        if self.target_user.role in ['owner', 'admin'] and request.user.role != 'owner':
+            messages.error(request, 'Only the owner can reset owner/admin passwords.')
+            return redirect('staff_list')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['target_user'] = self.target_user
+        return context
+
+    def form_valid(self, form):
+        temporary_password = AccountSecurityService.reset_password(user=self.target_user, actor=self.request.user)
+        messages.success(
+            self.request,
+            f'Temporary password for {self.target_user.effective_display_name}: {temporary_password}',
+        )
+        return redirect(self.get_success_url())

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Settings - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Account Settings</h2>
+    <a href="{% url 'profile' %}" class="btn btn-outline-secondary">Back to Profile</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">Credential Management</div>
+            <div class="card-body">
+                <p class="text-muted">Manage the identifiers you personally control after onboarding.</p>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'change_password' %}" class="btn btn-primary">Change Password</a>
+                    <a href="{% url 'change_username' %}" class="btn btn-outline-primary">Change Username</a>
+                    <a href="{% url 'change_email' %}" class="btn btn-outline-primary">Change Email</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">Profile Management</div>
+            <div class="card-body">
+                <p class="text-muted">Update your display information and profile picture without affecting authority or position assignment.</p>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'profile_edit' %}" class="btn btn-primary">Edit Profile</a>
+                    <a href="{% url 'profile' %}" class="btn btn-outline-secondary">View Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">Security</div>
+            <div class="card-body">
+                <h6>Two-Factor Authentication</h6>
+                <p class="text-muted mb-0">Placeholder for future production security rollout.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">Login History</div>
+            <div class="card-body">
+                <h6>Recent Access Log</h6>
+                <p class="text-muted mb-0">Placeholder for future login history and suspicious activity monitoring.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">Notifications</div>
+            <div class="card-body">
+                <h6>Notification Preferences</h6>
+                <p class="text-muted mb-0">Placeholder for future email and in-app notification preferences.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

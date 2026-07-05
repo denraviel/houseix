@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from accounts.models import CustomUser, JobPosition
 from rooms.models import Room
 
+from .forms import TaskForm
 from .models import InspectionTemplate, MaintenanceActivity, MaintenanceCategory, MaintenanceIssue, Task, TaskInspection
 from .services import InspectionWorkflowService, MaintenanceIssueService, MaintenanceWorkflowService, TaskAssignmentService
 
@@ -57,6 +58,12 @@ class InspectionWorkflowTests(TestCase):
         self.assertEqual(self.template.role, 'Cleaner')
         self.assertEqual(self.template.items.count(), 27)
         self.assertTrue(self.template.applicable_positions.filter(pk=self.cleaner_position.pk).exists())
+
+    def test_task_form_initializes_for_unsaved_task(self):
+        form = TaskForm()
+
+        self.assertIn('assigned_to', form.fields)
+        self.assertEqual(form.fields['assigned_to'].queryset.count(), 1)
 
     def test_staff_completion_moves_task_to_ready_for_review(self):
         task = self.create_task(status=Task.STATUS_IN_PROGRESS)

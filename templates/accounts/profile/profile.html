@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>My Profile</h2>
+    <a href="{% url 'profile_edit' %}" class="btn btn-primary">Edit Profile</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                {% if profile_user.profile_photo %}
+                <img src="{{ profile_user.profile_photo.url }}" alt="{{ profile_user.effective_display_name }}" class="img-fluid rounded-circle mb-3" style="max-width: 180px;">
+                {% else %}
+                <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" style="width: 180px; height: 180px;">
+                    <span class="display-5 text-muted">{{ profile_user.effective_display_name|first|upper }}</span>
+                </div>
+                {% endif %}
+                <h4 class="mb-1">{{ profile_user.effective_display_name }}</h4>
+                <div class="text-muted">{{ profile_user.get_role_display }}</div>
+                <div class="small text-muted mt-2">{{ profile_user.position_names|join:", "|default:"No positions assigned" }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Full Name</dt>
+                    <dd class="col-sm-8">{{ profile_user.full_name }}</dd>
+                    <dt class="col-sm-4">Display Name</dt>
+                    <dd class="col-sm-8">{{ profile_user.display_name|default:"-" }}</dd>
+                    <dt class="col-sm-4">Username</dt>
+                    <dd class="col-sm-8">{{ profile_user.username|default:"-" }}</dd>
+                    <dt class="col-sm-4">Email Address</dt>
+                    <dd class="col-sm-8">{{ profile_user.email }}</dd>
+                    <dt class="col-sm-4">Phone Number</dt>
+                    <dd class="col-sm-8">{{ profile_user.phone_number|default:"-" }}</dd>
+                    <dt class="col-sm-4">Authority Role</dt>
+                    <dd class="col-sm-8">{{ profile_user.get_role_display }}</dd>
+                    <dt class="col-sm-4">Job Positions</dt>
+                    <dd class="col-sm-8">{{ profile_user.position_names|join:", "|default:"-" }}</dd>
+                    <dt class="col-sm-4">Password Updated</dt>
+                    <dd class="col-sm-8">{{ profile_user.password_changed_at|date:"M d, Y H:i"|default:"-" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
