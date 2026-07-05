@@ -1,0 +1,21 @@
+<div class="card position-sticky" style="top: 1rem;">
+    <div class="card-header"><strong>Score Card</strong></div>
+    <div class="card-body">
+        <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Starting Score</span>
+            <strong id="starting-score">{{ inspection.starting_score }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Deductions</span>
+            <strong id="deduction-total">{{ preview_deductions }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Live Score</span>
+            <strong id="live-score">{{ preview_score }}</strong>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span class="text-muted">Result</span>
+            <strong id="live-result">{{ preview_result }}</strong>
+        </div>
+    </div>
+</div>

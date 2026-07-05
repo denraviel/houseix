@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Performance Dashboard - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Staff Performance Dashboard</h2>
+    <a href="{% url 'performance_reports' %}" class="btn btn-outline-primary">Performance Reports</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Staff</th>
+                        <th>Tasks Assigned</th>
+                        <th>Tasks Completed</th>
+                        <th>Completion Rate</th>
+                        <th>Total Ratings</th>
+                        <th>Average Rating</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in staff_performance %}
+                    <tr>
+                        <td>{{ row.staff.full_name }}</td>
+                        <td>{{ row.total_tasks }}</td>
+                        <td>{{ row.completed_tasks }}</td>
+                        <td>{{ row.completion_rate|floatformat:0 }}%</td>
+                        <td>{{ row.total_ratings }}</td>
+                        <td>{{ row.avg_rating|floatformat:1 }}</td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_performance_detail' row.staff.pk %}">View</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">No staff found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

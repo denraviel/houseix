@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Update Task - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Update Task</h2>
+  <a href="{% url 'my_tasks' %}" class="btn btn-outline-secondary">Back to My Tasks</a>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-8">
+        <div class="fw-semibold">{{ task.title }}</div>
+        <div class="text-muted">{{ task.get_task_type_display }}</div>
+        {% if task.required_position_names %}
+        <div class="text-muted small mt-1">Required Positions: {{ task.required_position_names|join:", " }}</div>
+        {% endif %}
+        {% if task.description %}
+        <div class="mt-2">{{ task.description }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">Due Date</div>
+        <div class="fw-semibold">{{ task.due_date }}</div>
+        <div class="text-muted small mt-2">Inspection</div>
+        <div class="fw-semibold">{% if task.requires_inspection %}Required{% else %}Not Required{% endif %}</div>
+        <div class="text-muted small mt-2">Current Status</div>
+        <div class="fw-semibold">{{ task.get_status_display }}</div>
+        {% if task.completed_at %}
+        <div class="text-muted small mt-2">Completed At</div>
+        <div class="fw-semibold">{{ task.completed_at|date:"M d, Y H:i" }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}
+        <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

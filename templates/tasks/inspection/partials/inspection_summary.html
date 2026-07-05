@@ -1,0 +1,45 @@
+<div class="card mb-4">
+  <div class="card-header"><strong>Inspection Summary</strong></div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="text-muted small">Task</div>
+        <div class="fw-semibold">{{ inspection.task.title }}</div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">Room</div>
+        <div class="fw-semibold">
+          {% if inspection.task.room %}{{ inspection.task.room.room_number }}{%
+          else %}-{% endif %}
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">Template</div>
+        <div class="fw-semibold">{{ inspection.template.name }}</div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">Worker</div>
+        <div class="fw-semibold">{{ inspection.worker.full_name }}</div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">Inspector</div>
+        <div class="fw-semibold">{{ inspection.inspector.full_name }}</div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">Final Score</div>
+        <div class="fw-semibold">{{ inspection.final_score }}</div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">Result</div>
+        <div class="fw-semibold">
+          {{ inspection.get_result_display|default:"Draft" }}
+        </div>
+      </div>
+    </div>
+    {% if inspection.inspector_notes %}
+    <hr />
+    <div class="text-muted small">Inspector Notes</div>
+    <div>{{ inspection.inspector_notes }}</div>
+    {% endif %}
+  </div>
+</div>

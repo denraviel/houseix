@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">{{ dashboard_title }}</h2>
+    {% if user.position_names %}
+    <div class="text-muted">{{ user.get_role_display }} · {{ user.position_names|join:", " }}</div>
+    {% endif %}
+  </div>
+</div>
+<div class="row mt-4">
+  <div class="col-md-4">
+    <div class="card text-white bg-success mb-3">
+      <div class="card-header">Total Sales</div>
+      <div class="card-body">
+        <h5 class="card-title">{{ total_sales }}</h5>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-white bg-info mb-3">
+      <div class="card-header">Today's Revenue</div>
+      <div class="card-body">
+        <h5 class="card-title">₦{{ today_revenue }}</h5>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-white bg-warning mb-3">
+      <div class="card-header">Total Staff</div>
+      <div class="card-body">
+        <h5 class="card-title">{{ total_staff }}</h5>
+        <small>Active: {{ active_staff }}</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <span>Tasks Today</span>
+        <a href="{% url 'task_list' %}" class="btn btn-sm btn-outline-primary"
+          >View Tasks</a
+        >
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col">
+            <div class="fw-semibold">{{ tasks_today_assigned }}</div>
+            <div class="text-muted small">Assigned</div>
+          </div>
+          <div class="col">
+            <div class="fw-semibold text-success">
+              {{ tasks_today_completed }}
+            </div>
+            <div class="text-muted small">Completed</div>
+          </div>
+          <div class="col">
+            <div class="fw-semibold text-primary">
+              {{ tasks_today_in_progress }}
+            </div>
+            <div class="text-muted small">In Progress</div>
+          </div>
+          <div class="col">
+            <div class="fw-semibold text-warning">
+              {{ tasks_today_pending }}
+            </div>
+            <div class="text-muted small">Pending</div>
+          </div>
+          <div class="col">
+            <div class="fw-semibold text-danger">{{ tasks_overdue }}</div>
+            <div class="text-muted small">Overdue</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <span>Top Performers This Month</span>
+        <a
+          href="{% url 'performance_reports' %}"
+          class="btn btn-sm btn-outline-primary"
+          >View Reports</a
+        >
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Staff</th>
+                <th>Average Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in top_performers %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ row.staff__full_name }}</td>
+                <td>{{ row.avg_rating|floatformat:1 }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-muted">
+                  No ratings yet this month.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if low_stock_products %}
+<div class="alert alert-warning mt-4" role="alert">
+  <h4 class="alert-heading">Low Stock Warning!</h4>
+  <p>The following products are low in stock (≤5 units):</p>
+  <ul>
+    {% for product in low_stock_products %}
+    <li>
+      {{product.name}} - {{product.quantity_in_stock}} {{product.unit_type}}
+      left
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Recent Staff Added</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for staff in recent_staff %}
+          <li
+            class="list-group-item d-flex justify-content-between align-items-center"
+          >
+            {{ staff.full_name }}
+            <span class="badge bg-secondary rounded-pill"
+              >{{ staff.get_role_display }}</span
+            >
+          </li>
+          {% empty %}
+          <li class="list-group-item">No recent staff added</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Recent Sales</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for sale in recent_sales %}
+          <li
+            class="list-group-item d-flex justify-content-between align-items-center"
+          >
+            {{ sale.quantity }}x {{ sale.product.name }}
+            <span class="badge bg-success">₦{{ sale.total_amount }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item">No recent sales</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Top Selling Products</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for product in top_selling_products %}
+          <li
+            class="list-group-item d-flex justify-content-between align-items-center"
+          >
+            {{ product.name }}
+            <span class="badge bg-primary">{{ product.total_sold }} sold</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item">No sales data yet</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if dashboard_widgets %}
+<div class="card mt-4">
+  <div class="card-header">Operational Access</div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for widget in dashboard_widgets %}
+      <div class="col-md-6 col-xl-4">
+        <div class="border rounded p-3 h-100">
+          <div class="fw-semibold">{{ widget.title }}</div>
+          <div class="text-muted small mb-2">{{ widget.subtitle }}</div>
+          <a href="{{ widget.url }}" class="btn btn-sm btn-outline-primary">Open</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

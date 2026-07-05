@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Customer & Booking Activity</h2>
+  <a href="{% url 'reports_dashboard' %}" class="btn btn-secondary">Back to Reports</a>
+</div>
+
+<form method="get" class="card mb-4">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Range</label>
+        <select class="form-select" name="range">
+          <option value="today" {% if range == 'today' %}selected{% endif %}>Today</option>
+          <option value="week" {% if range == 'week' %}selected{% endif %}>This Week</option>
+          <option value="month" {% if range == 'month' %}selected{% endif %}>This Month</option>
+          <option value="custom" {% if range == 'custom' %}selected{% endif %}>Custom</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" class="form-control" name="start_date" value="{{ start_date }}" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">End Date</label>
+        <input type="date" class="form-control" name="end_date" value="{{ end_date }}" />
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-primary w-100" type="submit">Apply</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="row mb-4">
+  <div class="col-md-4 mb-3">
+    <div class="card h-100">
+      <div class="card-header">Customers Created by Staff</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for row in customers_created %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ row.user_full_name }} ({{ row.user_role }})</span>
+            <span class="badge bg-primary rounded-pill">{{ row.total }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No data</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <div class="card h-100">
+      <div class="card-header">Guest Check-Ins by Staff</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for row in checkins %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ row.user_full_name }} ({{ row.user_role }})</span>
+            <span class="badge bg-danger rounded-pill">{{ row.total }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No data</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <div class="card h-100">
+      <div class="card-header">Guest Check-Outs by Staff</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for row in checkouts %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ row.user_full_name }} ({{ row.user_role }})</span>
+            <span class="badge bg-success rounded-pill">{{ row.total }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No data</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Activity Log</div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Action</th>
+            <th>Staff</th>
+            <th>Role</th>
+            <th>Customer</th>
+            <th>Booking</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in recent_logs %}
+          <tr>
+            <td>{{ log.timestamp|date:"d/m/Y H:i" }}</td>
+            <td>{{ log.get_action_type_display }}</td>
+            <td>{{ log.user_full_name }}</td>
+            <td>{{ log.user_role }}</td>
+            <td>
+              {% if log.customer %}
+              <a href="{% url 'customer_detail' log.customer.pk %}">{{ log.customer.full_name }}</a>
+              {% else %}
+              -
+              {% endif %}
+            </td>
+            <td>
+              {% if log.booking %}
+              <a href="{% url 'stay_detail' log.booking.pk %}">#{{ log.booking.pk }}</a>
+              {% else %}
+              -
+              {% endif %}
+            </td>
+            <td>{{ log.notes }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center">No activity</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

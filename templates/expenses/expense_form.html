@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{% if mode == 'edit' %}Edit Expense{% else %}Record Expense{% endif %} - HouseIX Ops{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="mb-1">{% if mode == 'edit' %}Edit Expense{% else %}Record Expense{% endif %}</h2>
+        <div class="text-muted">Capture operational expense details with full accountability.</div>
+      </div>
+      <a href="{% if expense %}{% url 'expense_detail' expense.pk %}{% else %}{% url 'expense_list' %}{% endif %}" class="btn btn-outline-secondary">Back</a>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">{% if mode == 'edit' %}Update Expense{% else %}Save Expense{% endif %}</button>
+            <a href="{% url 'expense_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

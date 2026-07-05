@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <h3 class="mb-3">Delete Room</h3>
+    <p>Are you sure you want to delete room <strong>{{ room.room_number }}</strong>?</p>
+    <p class="text-muted">This action cannot be undone. If the room has guest stay records, deletion will be blocked.</p>
+    <form method="post">
+      {% csrf_token %}
+      <a href="{% url 'room_list' %}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-danger">Delete Room</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

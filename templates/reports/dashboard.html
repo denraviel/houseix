@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports Dashboard - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-lg-8">
+    <h1 class="mb-1">Reports Dashboard</h1>
+    <p class="lead mb-0">
+      Read revenue and expense analytics without duplicating business logic.
+    </p>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="text-muted small text-uppercase">
+          Approved Expenses This Month
+        </div>
+        <div class="fs-4 fw-semibold">
+          N{{ expense_snapshot.this_month_approved_total|floatformat:2 }}
+        </div>
+        <div class="small text-muted">
+          {{ expense_snapshot.this_month_approved_count }} approved expense
+          record(s)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4 mb-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="text-muted small text-uppercase">
+          Pending Expense Approvals
+        </div>
+        <div class="fs-4 fw-semibold">
+          {{ expense_snapshot.pending_approval_count }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-8 mb-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Top Expense Categories</h5>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Count</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in expense_snapshot.top_categories %}
+              <tr>
+                <td>{{ row.category__name }}</td>
+                <td>{{ row.count }}</td>
+                <td>N{{ row.total|floatformat:2 }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted">
+                  No expense data yet.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-3 mb-4">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <h5 class="card-title">Sales Report</h5>
+        <p class="card-text">
+          View sales trends, revenue, and payment methods.
+        </p>
+        <a href="{% url 'sales_report' %}" class="btn btn-primary"
+          >View Report</a
+        >
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-4">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <h5 class="card-title">Inventory Report</h5>
+        <p class="card-text">
+          Check stock levels, low stock alerts, and inventory value.
+        </p>
+        <a href="{% url 'inventory_report' %}" class="btn btn-primary"
+          >View Report</a
+        >
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-4">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <h5 class="card-title">Product Performance</h5>
+        <p class="card-text">See top-selling products and profit margins.</p>
+        <a href="{% url 'product_performance_report' %}" class="btn btn-primary"
+          >View Report</a
+        >
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-4">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <h5 class="card-title">Staff Performance</h5>
+        <p class="card-text">Review staff sales performance and activity.</p>
+        <a href="{% url 'staff_performance_report' %}" class="btn btn-primary"
+          >View Report</a
+        >
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-4">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <h5 class="card-title">Customer & Bookings</h5>
+        <p class="card-text">
+          Track customer creation and guest check-ins/check-outs.
+        </p>
+        <a href="{% url 'activity_report' %}" class="btn btn-primary"
+          >View Report</a
+        >
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-4">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <h5 class="card-title">Expense Module</h5>
+        <p class="card-text">
+          Open the expense dashboard and maintain operating cost records.
+        </p>
+        <a href="{% url 'expense_dashboard' %}" class="btn btn-outline-primary"
+          >Open Expenses</a
+        >
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

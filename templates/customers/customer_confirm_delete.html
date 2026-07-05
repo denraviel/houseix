@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <h3 class="mb-3">Delete Customer</h3>
+    <p>Are you sure you want to delete <strong>{{ customer.full_name }}</strong>?</p>
+    <p class="text-muted">This action cannot be undone. If the customer has guest stay records, deletion will be blocked.</p>
+    <form method="post">
+      {% csrf_token %}
+      <a href="{% url 'customer_detail' customer.pk %}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-danger">Delete Customer</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

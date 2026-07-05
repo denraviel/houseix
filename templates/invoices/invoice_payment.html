@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Record Payment - {{ invoice.invoice_number }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Record Payment</h2>
+    <p class="text-muted mb-0">{{ invoice.invoice_number }} for {{ customer.full_name }} in Room {{ room.room_number }}</p>
+  </div>
+  <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-outline-secondary">Back to Invoice</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}
+          <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          {% for field in form %}
+          <div class="mb-3">
+            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+            <div class="form-text">{{ field.help_text }}</div>
+            {% endif %}
+            {% for error in field.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary">Record Payment</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><strong>Current Balances</strong></div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-2">
+          <span>Room Charges</span>
+          <strong>N{{ room_charge_total|floatformat:2 }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span>Room Payments</span>
+          <strong>N{{ room_payments_total|floatformat:2 }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-3">
+          <span>Room Balance</span>
+          <strong>N{{ room_balance|floatformat:2 }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span>Product Charges</span>
+          <strong>N{{ product_charge_total|floatformat:2 }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span>Product Payments</span>
+          <strong>N{{ product_payments_total|floatformat:2 }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-3">
+          <span>Product Balance</span>
+          <strong>N{{ product_balance|floatformat:2 }}</strong>
+        </div>
+        <hr />
+        <div class="d-flex justify-content-between">
+          <span>Total Outstanding Balance</span>
+          <strong>N{{ balance|floatformat:2 }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

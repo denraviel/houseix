@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}My Tasks - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">My Tasks</h2>
+  <a href="{% url 'employee_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+</div>
+
+<div class="row">
+  <div class="col-md-3">
+    <div class="card mb-3">
+      <div class="card-header">Pending</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for task in pending_tasks %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="me-2">
+                <div class="fw-semibold">{{ task.title }}</div>
+                <div class="text-muted small">{% if task.room %}Room {{ task.room.room_number }} - {% endif %}{{ task.get_task_type_display }}{% if task.required_position_names %} - {{ task.required_position_names|join:", " }}{% endif %} - Due {{ task.due_date }}</div>
+              </div>
+              <div class="d-flex gap-2">
+                <a
+                  href="{% url 'staff_task_update' task.pk %}"
+                  class="btn btn-sm btn-outline-secondary"
+                  >Update</a
+                >
+                <form
+                  method="post"
+                  action="{% url 'staff_task_start' task.pk %}"
+                >
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-primary">
+                    Start
+                  </button>
+                </form>
+              </div>
+            </div>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No pending tasks.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card mb-3">
+      <div class="card-header">In Progress</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for task in in_progress_tasks %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="me-2">
+                <div class="fw-semibold">{{ task.title }}</div>
+                <div class="text-muted small">{% if task.room %}Room {{ task.room.room_number }} - {% endif %}{{ task.get_task_type_display }}{% if task.required_position_names %} - {{ task.required_position_names|join:", " }}{% endif %} - Due {{ task.due_date }}</div>
+              </div>
+              <div class="d-flex gap-2">
+                <a
+                  href="{% url 'staff_task_update' task.pk %}"
+                  class="btn btn-sm btn-outline-secondary"
+                  >Update</a
+                >
+                <form
+                  method="post"
+                  action="{% url 'staff_task_complete' task.pk %}"
+                >
+                  {% csrf_token %} {% if task.requires_inspection %}
+                  <button type="submit" class="btn btn-sm btn-success">
+                    Send For Review
+                  </button>
+                  {% else %}
+                  <button type="submit" class="btn btn-sm btn-success">
+                    Complete
+                  </button>
+                  {% endif %}
+                </form>
+              </div>
+            </div>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No tasks in progress.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card mb-3">
+      <div class="card-header">Ready for Review</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for task in ready_for_review_tasks %}
+          <li class="list-group-item">
+            <div class="fw-semibold">{{ task.title }}</div>
+            <div class="text-muted small">
+              {% if task.room %}Room {{ task.room.room_number }} - {% endif %}{{ task.get_task_type_display }}{% if task.required_position_names %} - {{ task.required_position_names|join:", " }}{% endif %} - Awaiting manager audit
+            </div>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No tasks awaiting review.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card mb-3">
+      <div class="card-header">Completed</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for task in completed_tasks %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="me-2">
+                <div class="fw-semibold">{{ task.title }}</div>
+                <div class="text-muted small">{% if task.room %}Room {{ task.room.room_number }} - {% endif %}{{ task.get_task_type_display }}{% if task.required_position_names %} - {{ task.required_position_names|join:", " }}{% endif %}{% if task.completed_at %} - Completed {{ task.completed_at|date:"M d, Y H:i" }}{% endif %}</div>
+              </div>
+              <a
+                href="{% url 'staff_task_update' task.pk %}"
+                class="btn btn-sm btn-outline-secondary"
+                >View</a
+              >
+            </div>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No completed tasks.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

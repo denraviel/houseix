@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Recurring Expenses - HouseIX Ops{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Recurring Expenses</h2>
+    <div class="text-muted">Manage subscriptions and scheduled operating costs.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <form method="post" action="{% url 'recurring_expense_generate' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-primary">Generate Due Expenses</button>
+    </form>
+    <a href="{% url 'recurring_expense_create' %}" class="btn btn-primary">New Schedule</a>
+  </div>
+</div>
+
+{% if due_recurring_expenses %}
+<div class="alert alert-warning">
+  <strong>{{ due_recurring_expenses|length }}</strong> recurring expense schedule(s) are due for generation.
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Vendor</th>
+            <th>Amount</th>
+            <th>Frequency</th>
+            <th>Next Due</th>
+            <th>Last Generated</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for recurring in recurring_expenses %}
+          <tr>
+            <td>{{ recurring.category.name }}</td>
+            <td>{{ recurring.vendor.name|default:"-" }}</td>
+            <td>N{{ recurring.amount|floatformat:2 }}</td>
+            <td>{{ recurring.get_frequency_display }}</td>
+            <td>{{ recurring.next_due_date }}</td>
+            <td>{{ recurring.last_generated|default:"-" }}</td>
+            <td>
+              {% if recurring.is_active %}
+              <span class="badge bg-success">Active</span>
+              {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted">No recurring expense schedules available.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

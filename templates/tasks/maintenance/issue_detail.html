@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ issue.issue_number }} - Maintenance - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <h2 class="mb-0">{{ issue.issue_number }}</h2>
+      {% include 'tasks/maintenance/partials/status_badge.html' with issue=issue %}
+      <span class="badge bg-{{ issue.priority_badge_class }}">{{ issue.get_priority_display }}</span>
+    </div>
+    <div class="text-muted">{{ issue.title }}</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'maintenance_issue_list' %}" class="btn btn-outline-secondary">Back to Issues</a>
+    {% if can_edit %}
+    <a href="{% url 'maintenance_issue_update' issue.pk %}" class="btn btn-outline-primary">Edit</a>
+    {% endif %}
+    {% if user.role == 'owner' or user.role == 'admin' %}
+    <a href="{% url 'maintenance_issue_assign' issue.pk %}" class="btn btn-warning">Assign</a>
+    {% endif %}
+    {% if can_escalate %}
+    <a href="{% url 'maintenance_issue_escalate' issue.pk %}" class="btn btn-outline-danger">Escalate</a>
+    {% endif %}
+    {% if can_verify %}
+    <a href="{% url 'maintenance_issue_verify' issue.pk %}" class="btn btn-success">Verify Repair</a>
+    {% endif %}
+    {% if can_record_expense %}
+    <a href="{% url 'maintenance_issue_record_expense' issue.pk %}" class="btn btn-outline-dark">Record Expense</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card mb-4">
+      <div class="card-header">Issue Details</div>
+      <div class="card-body">
+        <div class="row mb-2"><div class="col-md-4 text-muted">Title</div><div class="col-md-8">{{ issue.title }}</div></div>
+        <div class="row mb-2"><div class="col-md-4 text-muted">Description</div><div class="col-md-8">{{ issue.description|linebreaksbr }}</div></div>
+        <div class="row mb-2"><div class="col-md-4 text-muted">Category</div><div class="col-md-8">{{ issue.category.name }}</div></div>
+        <div class="row mb-2"><div class="col-md-4 text-muted">Room</div><div class="col-md-8">{% if issue.room %}Room {{ issue.room.room_number }}{% else %}-{% endif %}</div></div>
+        <div class="row mb-2"><div class="col-md-4 text-muted">Reported By</div><div class="col-md-8">{{ issue.reported_by.full_name }}</div></div>
+        <div class="row mb-2"><div class="col-md-4 text-muted">Assigned To</div><div class="col-md-8">{% if issue.assigned_to %}{{ issue.assigned_to.full_name }}{% else %}-{% endif %}</div></div>
+        <div class="row mb-2"><div class="col-md-4 text-muted">External Vendor</div><div class="col-md-8">{% if issue.requires_external_vendor %}Required{% else %}No{% endif %}</div></div>
+        <div class="row mb-2"><div class="col-md-4 text-muted">Expense Required</div><div class="col-md-8">{% if issue.requires_expense %}Yes{% else %}No{% endif %}</div></div>
+        <div class="row mb-2"><div class="col-md-4 text-muted">Resolved At</div><div class="col-md-8">{% if issue.resolved_at %}{{ issue.resolved_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</div></div>
+        <div class="row"><div class="col-md-4 text-muted">Verified At</div><div class="col-md-8">{% if issue.verified_at %}{{ issue.verified_at|date:"Y-m-d H:i" }} by {{ issue.verified_by.full_name }}{% else %}-{% endif %}</div></div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header">Photo Gallery</div>
+      <div class="card-body">
+        {% include 'tasks/maintenance/partials/photo_gallery.html' with photos=photos %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Maintenance Timeline</div>
+      <div class="card-body">
+        {% include 'tasks/maintenance/partials/activity_timeline.html' with activities=activities %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-4">
+      <div class="card-header">Linked Records</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="text-muted small">Linked Task</div>
+          {% if issue.task %}
+          <div class="fw-semibold">
+            <a href="{% url 'task_update' issue.task.pk %}" class="text-decoration-none">{{ issue.task.title }}</a>
+          </div>
+          <div class="small text-muted">{{ issue.task.get_status_display }}{% if issue.task.assigned_to %} - {{ issue.task.assigned_to.full_name }}{% endif %}</div>
+          {% else %}
+          <div class="text-muted">No linked task yet.</div>
+          {% endif %}
+        </div>
+        <div>
+          <div class="text-muted small">Linked Expense</div>
+          {% if issue.expense %}
+          <div class="fw-semibold">
+            <a href="{% url 'expense_detail' issue.expense.pk %}" class="text-decoration-none">{{ issue.expense.expense_number }}</a>
+          </div>
+          <div class="small text-muted">{{ issue.expense.category.name }} - N{{ issue.expense.amount }}</div>
+          {% else %}
+          <div class="text-muted">No expense linked yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Quick Links</div>
+      <div class="list-group list-group-flush">
+        <a href="{% url 'maintenance_activity_list' %}?issue={{ issue.pk }}" class="list-group-item list-group-item-action">View Activity History</a>
+        <a href="{% url 'maintenance_dashboard' %}" class="list-group-item list-group-item-action">Open Maintenance Dashboard</a>
+        {% if can_manage_categories %}
+        <a href="{% url 'maintenance_category_list' %}" class="list-group-item list-group-item-action">Maintenance Categories</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

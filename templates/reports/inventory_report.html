@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory Report - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col">
+    <h1>Inventory Report</h1>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'reports_dashboard' %}">Reports Dashboard</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">
+          Inventory Report
+        </li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card bg-primary text-white">
+      <div class="card-body">
+        <h5 class="card-title">Total Products</h5>
+        <p class="card-text display-4">{{ total_products }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-success text-white">
+      <div class="card-body">
+        <h5 class="card-title">Total Inventory Items</h5>
+        <p class="card-text display-4">{{ total_inventory_items }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-info text-white">
+      <div class="card-body">
+        <h5 class="card-title">Total Inventory Value</h5>
+        <p class="card-text display-4">
+          ₦{{ total_product_sell_value|floatformat:2 }}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="card-title mb-0">⚠️ Low Stock Products</h5>
+      </div>
+      <div class="card-body">
+        {% if low_stock_products %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Stock</th>
+                <th>Unit Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in low_stock_products %}
+              <tr class="table-warning">
+                <td>{{ product.name }}</td>
+                <td>{{ product.category }}</td>
+                <td><strong>{{ product.quantity_in_stock }}</strong></td>
+                <td>{{ product.unit_type }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-success">All products are well-stocked!</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="card-title mb-0">⚠️ Low Stock Inventory</h5>
+      </div>
+      <div class="card-body">
+        {% if low_stock_inventory %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Category</th>
+                <th>Stock</th>
+                <th>Threshold</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in low_stock_inventory %}
+              <tr class="table-warning">
+                <td>{{ item.item_name }}</td>
+                <td>{{ item.category }}</td>
+                <td><strong>{{ item.quantity }}</strong></td>
+                <td>{{ item.low_stock_threshold }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-success">All inventory items are well-stocked!</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6 mb-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Product Stock by Category</h5>
+      </div>
+      <div class="card-body">
+        {% if product_stock_by_category %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Total Units</th>
+                <th>Cost Value</th>
+                <th>Sell Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in product_stock_by_category %}
+              <tr>
+                <td>{{ item.category }}</td>
+                <td>{{ item.total_quantity }}</td>
+                <td>₦{{ item.total_cost_value|floatformat:2 }}</td>
+                <td>₦{{ item.total_sell_value|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No product data available.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 mb-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Inventory by Category</h5>
+      </div>
+      <div class="card-body">
+        {% if inventory_stock_by_category %}
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Total Units</th>
+                <th>Total Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in inventory_stock_by_category %}
+              <tr>
+                <td>{{ item.category }}</td>
+                <td>{{ item.total_quantity }}</td>
+                <td>₦{{ item.total_value|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No inventory data available.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Stock Value Summary</h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body">
+            <h6 class="card-title">Product Cost Value</h6>
+            <p class="card-text display-6">
+              ₦{{ total_product_cost_value|floatformat:2 }}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body">
+            <h6 class="card-title">Product Sell Value</h6>
+            <p class="card-text display-6">
+              ₦{{ total_product_sell_value|floatformat:2 }}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body">
+            <h6 class="card-title">Inventory Value</h6>
+            <p class="card-text display-6">
+              ₦{{ total_inventory_value|floatformat:2 }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Inspection History - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0">Inspection History</h2>
+        <div class="text-muted">Review all submitted inspections for reporting and quality control.</div>
+    </div>
+    <a href="{% url 'inspection_list' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label" for="{{ filter_form.template.id_for_label }}">Template</label>
+                {{ filter_form.template }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="{{ filter_form.result.id_for_label }}">Result</label>
+                {{ filter_form.result }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="{{ filter_form.worker.id_for_label }}">Worker</label>
+                {{ filter_form.worker }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="{{ filter_form.search.id_for_label }}">Task Search</label>
+                {{ filter_form.search }}
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Apply</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Submitted At</th>
+                        <th>Task</th>
+                        <th>Worker</th>
+                        <th>Template</th>
+                        <th>Score</th>
+                        <th>Result</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inspection in inspections %}
+                    <tr>
+                        <td>{% if inspection.submitted_at %}{{ inspection.submitted_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+                        <td>{{ inspection.task.title }}</td>
+                        <td>{{ inspection.worker.full_name }}</td>
+                        <td>{{ inspection.template.name }}</td>
+                        <td>{{ inspection.final_score }}</td>
+                        <td>{{ inspection.get_result_display }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'inspection_detail' inspection.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-muted">No submitted inspections found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Inventory</h2>
+
+<div class="mb-3">
+  <a href="{% url 'stock_movement_create' %}" class="btn btn-success"
+    >Take Inventory</a
+  >
+  {% if user.role == 'owner' or user.role == 'admin' %}
+  <a href="{% url 'inventory_item_create' %}" class="btn btn-primary ms-2"
+    >Add Inventory Item</a
+  >
+  {% endif %}
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Item Name</th>
+        <th>Category</th>
+        <th>Quantity</th>
+        <th>Unit Type</th>
+        <th>Cost Price</th>
+        <th>Low Stock Threshold</th>
+        <th>Stock Value</th>
+        <th>Last Updated</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr
+        class="{% if item.quantity <= item.low_stock_threshold %}table-warning{% endif %}"
+      >
+        <td>{{ item.item_name }}</td>
+        <td>{{ item.get_category_display }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.unit_type }}</td>
+        <td>₦{{ item.cost_price }}</td>
+        <td>{{ item.low_stock_threshold }}</td>
+        <td>₦{{ item.stock_value }}</td>
+        <td>{{ item.last_updated }}</td>
+        <td>
+          {% if user.role == 'owner' or user.role == 'admin' or user.role == 'manager' %}
+          <a
+            href="{% url 'inventory_item_edit' item.pk %}"
+            class="btn btn-sm btn-info me-1"
+            >Edit</a
+          >
+          <a
+            href="{% url 'add_stock' item.pk %}"
+            class="btn btn-sm btn-success me-1"
+            >Add Stock</a
+          >
+          {% endif %}
+          {% if user.role == 'owner' or user.role == 'admin' %}
+          <a
+            href="{% url 'inventory_item_delete' item.pk %}"
+            class="btn btn-sm btn-danger"
+            >Delete</a
+          >
+          {% endif %}
+          {% if user.role == 'staff' %}
+          <span class="text-muted">View only</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="text-center">No inventory items found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

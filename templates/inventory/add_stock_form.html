@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Stock - {{ item.item_name }} - HouseIX Ops{% endblock %}
+
+{% block content %}
+<h2>Add Stock for {{ item.item_name }}</h2>
+<div class="card mb-3">
+    <div class="card-body">
+        <p><strong>Current Stock:</strong> {{ item.quantity }} {{ item.unit_type }}</p>
+        <p><strong>Category:</strong> {{ item.get_category_display }}</p>
+        <p><strong>Low Stock Threshold:</strong> {{ item.low_stock_threshold }} {{ item.unit_type }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {% for field in form %}
+                {% if field.field.widget.input_type == 'checkbox' %}
+                    <div class="form-check mb-3">
+                        {{ field }}
+                        <label for="{{ field.id_for_label }}" class="form-check-label">{{ field.label }}</label>
+                    </div>
+                {% else %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                {% endif %}
+                    {% if field.help_text %}
+                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Add Stock</button>
+            <a href="{% url 'inventory_list' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

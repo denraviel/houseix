@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Vendors - HouseIX Ops{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Vendors</h2>
+    <div class="text-muted">Suppliers and service providers paid by the hotel.</div>
+  </div>
+  <a href="{% url 'vendor_create' %}" class="btn btn-primary">New Vendor</a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vendor in vendors %}
+          <tr>
+            <td>{{ vendor.name }}</td>
+            <td>{{ vendor.phone|default:"-" }}</td>
+            <td>{{ vendor.email|default:"-" }}</td>
+            <td>
+              {% if vendor.is_active %}
+              <span class="badge bg-success">Active</span>
+              {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-muted">No vendors available.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

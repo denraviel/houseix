@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Report - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Sales Report</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'reports_dashboard' %}">Reports Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Sales Report</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<form method="get" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">Start Date</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date|default:'' }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">End Date</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date|default:'' }}">
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </div>
+    </div>
+</form>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Revenue</h5>
+                <p class="card-text display-4">₦{{ total_revenue|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Sales</h5>
+                <p class="card-text display-4">{{ total_sales_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">Average Sale</h5>
+                <p class="card-text display-4">₦{{ avg_sale_value|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Today</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>Revenue:</strong> ₦{{ today_revenue|floatformat:2 }}</p>
+                <p class="mb-0"><strong>Sales:</strong> {{ today_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Last 7 Days</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>Revenue:</strong> ₦{{ week_revenue|floatformat:2 }}</p>
+                <p class="mb-0"><strong>Sales:</strong> {{ week_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Last 30 Days</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>Revenue:</strong> ₦{{ month_revenue|floatformat:2 }}</p>
+                <p class="mb-0"><strong>Sales:</strong> {{ month_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Sales by Category</h5>
+            </div>
+            <div class="card-body">
+                {% if sales_by_category %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Revenue</th>
+                                <th>Sales</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in sales_by_category %}
+                            <tr>
+                                <td>{{ item.product__category|default:'Unknown' }}</td>
+                                <td>₦{{ item.category_revenue|floatformat:2 }}</td>
+                                <td>{{ item.category_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No sales data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Sales by Payment Method</h5>
+            </div>
+            <div class="card-body">
+                {% if sales_by_payment %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Revenue</th>
+                                <th>Sales</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in sales_by_payment %}
+                            <tr>
+                                <td>{{ item.payment_method|title }}</td>
+                                <td>₦{{ item.payment_revenue|floatformat:2 }}</td>
+                                <td>{{ item.payment_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No sales data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Daily Sales (Last 30 Days)</h5>
+    </div>
+    <div class="card-body">
+        {% if daily_sales %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Revenue</th>
+                        <th>Sales</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in daily_sales %}
+                    <tr>
+                        <td>{{ day.date }}</td>
+                        <td>₦{{ day.daily_revenue|floatformat:2 }}</td>
+                        <td>{{ day.daily_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No daily sales data available.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

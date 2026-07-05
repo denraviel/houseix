@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff Performance - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Staff Performance Report</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'reports_dashboard' %}">Reports Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Staff Performance</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">👥 Staff Sales Performance</h5>
+    </div>
+    <div class="card-body">
+        {% if staff_sales %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Staff Member</th>
+                        <th>Role</th>
+                        <th>Total Sales</th>
+                        <th>Total Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in staff_sales %}
+                    <tr>
+                        <td><strong>{{ forloop.counter }}</strong></td>
+                        <td>{{ staff.full_name }}</td>
+                        <td>{{ staff.role|title }}</td>
+                        <td>{{ staff.total_sales }}</td>
+                        <td>₦{{ staff.total_revenue|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No sales data available for staff.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

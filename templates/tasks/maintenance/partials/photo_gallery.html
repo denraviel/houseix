@@ -1,0 +1,19 @@
+<div class="row g-3">
+  {% for photo in photos %}
+  <div class="col-md-6">
+    <div class="card h-100">
+      <img src="{{ photo.image.url }}" class="card-img-top" alt="{{ photo.caption|default:'Maintenance photo' }}" style="object-fit: cover; max-height: 220px;" />
+      <div class="card-body">
+        <div class="fw-semibold">{{ photo.caption|default:"Maintenance Photo" }}</div>
+        <div class="small text-muted">
+          {% if photo.issue %}{{ photo.issue.issue_number }} - {% endif %}
+          {% if photo.uploaded_by %}{{ photo.uploaded_by.full_name }}{% else %}System{% endif %} -
+          {{ photo.uploaded_at|date:"Y-m-d H:i" }}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12 text-muted">No photos uploaded yet.</div>
+  {% endfor %}
+</div>

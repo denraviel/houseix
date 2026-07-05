@@ -1,0 +1,37 @@
+from django.urls import path
+from . import views
+
+
+urlpatterns = [
+    path('', views.task_list, name='task_list'),
+    path('create/', views.task_create, name='task_create'),
+    path('update/<int:pk>/', views.task_update, name='task_update'),
+    path('delete/<int:pk>/', views.task_delete, name='task_delete'),
+    path('maintenance/', views.MaintenanceDashboardView.as_view(), name='maintenance_dashboard'),
+    path('maintenance/issues/', views.MaintenanceIssueListView.as_view(), name='maintenance_issue_list'),
+    path('maintenance/create/', views.MaintenanceIssueCreateView.as_view(), name='maintenance_issue_create'),
+    path('maintenance/<int:pk>/', views.MaintenanceIssueDetailView.as_view(), name='maintenance_issue_detail'),
+    path('maintenance/<int:pk>/edit/', views.MaintenanceIssueUpdateView.as_view(), name='maintenance_issue_update'),
+    path('maintenance/<int:pk>/assign/', views.MaintenanceIssueAssignView.as_view(), name='maintenance_issue_assign'),
+    path('maintenance/<int:pk>/verify/', views.MaintenanceIssueVerifyView.as_view(), name='maintenance_issue_verify'),
+    path('maintenance/<int:pk>/escalate/', views.MaintenanceIssueEscalateView.as_view(), name='maintenance_issue_escalate'),
+    path('maintenance/<int:pk>/record-expense/', views.MaintenanceRecordExpenseRedirectView.as_view(), name='maintenance_issue_record_expense'),
+    path('maintenance/categories/', views.MaintenanceCategoryListView.as_view(), name='maintenance_category_list'),
+    path('maintenance/categories/create/', views.MaintenanceCategoryCreateView.as_view(), name='maintenance_category_create'),
+    path('maintenance/activities/', views.MaintenanceActivityListView.as_view(), name='maintenance_activity_list'),
+    path('inspections/', views.InspectionListView.as_view(), name='inspection_list'),
+    path('inspections/history/', views.InspectionHistoryView.as_view(), name='inspection_history'),
+    path('inspection/<int:pk>/', views.InspectionDetailView.as_view(), name='inspection_detail'),
+    path('inspection/<int:pk>/edit/', views.InspectionUpdateView.as_view(), name='inspection_update'),
+    path('inspection/<int:pk>/submit/', views.InspectionSubmitView.as_view(), name='inspection_submit'),
+    path('task/<int:task_id>/audit/', views.InspectionCreateView.as_view(), name='inspection_create'),
+    path('my-tasks/', views.my_tasks, name='my_tasks'),
+    path('my-performance/', views.my_performance, name='my_performance'),
+    path('my-tasks/<int:pk>/start/', views.staff_task_start, name='staff_task_start'),
+    path('my-tasks/<int:pk>/complete/', views.staff_task_complete, name='staff_task_complete'),
+    path('my-tasks/update/<int:pk>/', views.staff_task_update, name='staff_task_update'),
+    path('performance-rating/<int:pk>/', views.performance_rating_create, name='performance_rating_create'),
+    path('performance-dashboard/', views.performance_dashboard, name='performance_dashboard'),
+    path('performance-reports/', views.performance_reports, name='performance_reports'),
+    path('staff-performance/<int:pk>/', views.staff_performance_detail, name='staff_performance_detail'),
+]

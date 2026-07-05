@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Invoices - HouseIX Ops{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Invoices</h2>
+    <p class="text-muted mb-0">Room charges come from guest stays and product charges come from sales linked to each stay.</p>
+  </div>
+  {% if can_manage %}
+  <div class="d-flex gap-2">
+    <a href="{% url 'invoice_history' %}" class="btn btn-outline-secondary">History</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-primary">Generate Invoice</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3">
+      <div class="col-md-6">
+        <label for="{{ filter_form.q.id_for_label }}" class="form-label">Search</label>
+        {{ filter_form.q }}
+      </div>
+      <div class="col-md-3">
+        <label for="{{ filter_form.status.id_for_label }}" class="form-label">Status</label>
+        {{ filter_form.status }}
+      </div>
+      <div class="col-md-3 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="{% url 'invoice_list' %}" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Invoice</th>
+            <th>Guest</th>
+            <th>Room</th>
+            <th>Invoice Date</th>
+            <th>Status</th>
+            <th>Grand Total</th>
+            <th>Balance</th>
+            <th>Assigned To</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for invoice in invoices %}
+          <tr>
+            <td>
+              <a href="{% url 'invoice_detail' invoice.pk %}">{{ invoice.invoice_number }}</a>
+            </td>
+            <td>{{ invoice.stay.customer.full_name }}</td>
+            <td>Room {{ invoice.stay.room.room_number }}</td>
+            <td>{{ invoice.invoice_date|date:"Y-m-d" }}</td>
+            <td>
+              <span class="badge bg-{{ invoice.status_badge_class }}">{{ invoice.get_status_display }}</span>
+            </td>
+            <td>N{{ invoice.grand_total|floatformat:2 }}</td>
+            <td>N{{ invoice.balance|floatformat:2 }}</td>
+            <td>{{ invoice.assigned_to.full_name|default:"-" }}</td>
+            <td class="text-nowrap">
+              <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+              <a href="{% url 'invoice_print' invoice.pk %}" class="btn btn-sm btn-outline-secondary">Print</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center py-4">No invoices found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

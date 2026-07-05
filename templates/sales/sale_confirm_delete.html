@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Sale - HouseIX Ops{% endblock %}
+
+{% block content %}
+<h2>Delete Sale Record</h2>
+<div class="card">
+    <div class="card-body">
+        <p>Are you sure you want to delete this sale record?</p>
+        <div class="mb-3">
+            <strong>Product:</strong> {{ sale.product.name }}<br>
+            <strong>Quantity:</strong> {{ sale.quantity }}<br>
+            <strong>Total Amount:</strong> ₦{{ sale.total_amount }}<br>
+            <strong>Recorded By:</strong> {{ sale.recorded_by.full_name }}<br>
+            <strong>Date:</strong> {{ sale.created_at }}
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <a href="{% url 'sales_list' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

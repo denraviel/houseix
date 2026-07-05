@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Invoice History - HouseIX Ops{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Invoice History</h2>
+    <p class="text-muted mb-0">Audit trail for invoice generation, updates, payments, printing, and PDF export.</p>
+  </div>
+  <a href="{% url 'invoice_list' %}" class="btn btn-outline-secondary">Back to Invoices</a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3">
+      <div class="col-md-9">
+        <label for="id_q" class="form-label">Search</label>
+        <input type="text" name="q" id="id_q" value="{{ request.GET.q }}" class="form-control" placeholder="Invoice number, user, or notes" />
+      </div>
+      <div class="col-md-3 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="{% url 'invoice_history' %}" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Invoice</th>
+            <th>Action</th>
+            <th>User</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in history_entries %}
+          <tr>
+            <td>{{ entry.created_at|date:"Y-m-d H:i" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' entry.invoice.pk %}">{{ entry.invoice.invoice_number }}</a>
+            </td>
+            <td>{{ entry.get_action_type_display }}</td>
+            <td>{{ entry.user_full_name|default:"System" }}</td>
+            <td>{{ entry.notes|default:"-" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center">No invoice history found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

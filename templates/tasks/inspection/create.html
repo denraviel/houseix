@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Start Inspection - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Start Inspection</h2>
+    <div class="text-muted">Create an audit for a task that is ready for review.</div>
+  </div>
+  <a href="{% url 'task_list' %}" class="btn btn-outline-secondary">Back to Tasks</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><strong>Task Summary</strong></div>
+      <div class="card-body">
+        <div class="mb-2"><span class="text-muted">Task:</span> {{ task.title }}</div>
+        <div class="mb-2"><span class="text-muted">Type:</span> {{ task.get_task_type_display }}</div>
+        <div class="mb-2"><span class="text-muted">Room:</span> {% if task.room %}{{ task.room.room_number }}{% else %}-{% endif %}</div>
+        <div class="mb-2"><span class="text-muted">Assigned To:</span> {{ task.assigned_to.full_name }}</div>
+        <div class="mb-2"><span class="text-muted">Due Date:</span> {{ task.due_date }}</div>
+        <div class="mb-2"><span class="text-muted">Status:</span> {{ task.get_status_display }}</div>
+        <div class="mb-0"><span class="text-muted">Inspection Required:</span> {% if task.requires_inspection %}Yes{% else %}No{% endif %}</div>
+        {% if task.description %}
+        <hr>
+        <div class="text-muted small mb-1">Description</div>
+        <div>{{ task.description }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><strong>Inspection Setup</strong></div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.template.id_for_label }}">Template</label>
+            {{ form.template }}
+            {% for error in form.template.errors %}
+            <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.inspector_notes.id_for_label }}">Inspector Notes</label>
+            {{ form.inspector_notes }}
+            {% for error in form.inspector_notes.errors %}
+            <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <button type="submit" class="btn btn-primary">Start Audit</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>Section</th>
+                <th>Checklist Item</th>
+                <th class="text-center">Pass</th>
+                <th class="text-center">Fail</th>
+                <th>Deduction</th>
+                <th>Comment</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for form in result_formset.forms %}
+            <tr data-deduction="{{ form.instance.template_item.deduction_points }}">
+                <td>{{ form.instance.template_item.get_section_display }}</td>
+                <td>
+                    <div class="fw-semibold">{{ form.instance.template_item.description }}</div>
+                    <div class="small text-muted">{{ form.instance.template_item.get_severity_display }}</div>
+                    {{ form.id }}
+                </td>
+                <td class="text-center">
+                    {% for radio in form.passed %}
+                    {% if radio.choice_label == 'Pass' %}
+                    <div class="form-check d-inline-block">
+                        {{ radio.tag }}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </td>
+                <td class="text-center">
+                    {% for radio in form.passed %}
+                    {% if radio.choice_label == 'Fail' %}
+                    <div class="form-check d-inline-block">
+                        {{ radio.tag }}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                    {% for error in form.passed.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </td>
+                <td>{{ form.instance.template_item.deduction_points }}</td>
+                <td>
+                    {{ form.comment }}
+                    {% for error in form.comment.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

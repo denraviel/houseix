@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Fuel Logs - HouseIX Ops{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Fuel Logs</h2>
+    <div class="text-muted">Track diesel usage and generator operating performance.</div>
+  </div>
+  <a href="{% url 'fuel_log_create' %}" class="btn btn-primary">New Fuel Log</a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Expense</th>
+            <th>Generator</th>
+            <th>Opening</th>
+            <th>Purchased</th>
+            <th>Closing</th>
+            <th>Hours</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fuel_log in fuel_logs %}
+          <tr>
+            <td><a href="{% url 'expense_detail' fuel_log.expense.pk %}">{{ fuel_log.expense.expense_number }}</a></td>
+            <td>{{ fuel_log.generator_name }}</td>
+            <td>{{ fuel_log.opening_litres }}</td>
+            <td>{{ fuel_log.purchased_litres }}</td>
+            <td>{{ fuel_log.closing_litres }}</td>
+            <td>{{ fuel_log.generator_hours }}</td>
+            <td>{{ fuel_log.expense.expense_date }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted">No fuel logs available.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

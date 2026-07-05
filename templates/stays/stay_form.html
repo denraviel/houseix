@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  {% if mode == 'edit' %}
+  <h2>Edit Stay</h2>
+  {% else %}
+  <h2>Add Stay</h2>
+  {% endif %}
+  <a href="{% url 'stay_list' %}" class="btn btn-secondary">Back to Stays</a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label class="form-label">Customer</label>
+        {{ form.customer }}
+        {% if form.customer.errors %}
+        <div class="text-danger">{{ form.customer.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Room</label>
+        {{ form.room }}
+        {% if form.room.errors %}
+        <div class="text-danger">{{ form.room.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Check-in Date</label>
+        {{ form.check_in_date }}
+        {% if form.check_in_date.errors %}
+        <div class="text-danger">{{ form.check_in_date.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Check-out Date</label>
+        {{ form.check_out_date }}
+        {% if form.check_out_date.errors %}
+        <div class="text-danger">{{ form.check_out_date.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Status</label>
+        {% if form.status %}
+        {{ form.status }}
+        {% if form.status.errors %}
+        <div class="text-danger">{{ form.status.errors }}</div>
+        {% endif %}
+        {% else %}
+        <input type="text" class="form-control" value="Checked In" disabled />
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Daily Rate</label>
+        {% if form.daily_rate %}
+        {{ form.daily_rate }}
+        {% if form.daily_rate.errors %}
+        <div class="text-danger">{{ form.daily_rate.errors }}</div>
+        {% endif %}
+        <div class="form-text">Leave blank to use the selected room's daily rate automatically.</div>
+        {% else %}
+        <input type="text" class="form-control" value="Auto from Room" disabled />
+        <div class="form-text">Daily rate will be taken automatically from the selected room.</div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

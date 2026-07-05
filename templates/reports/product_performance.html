@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Product Performance - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Product Performance Report</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'reports_dashboard' %}">Reports Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Product Performance</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="card-title mb-0">🏆 Top Selling Products</h5>
+    </div>
+    <div class="card-body">
+        {% if products_with_profit %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Units Sold</th>
+                        <th>Total Revenue</th>
+                        <th>Profit/Unit</th>
+                        <th>Total Profit</th>
+                        <th>Profit Margin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in products_with_profit %}
+                    <tr>
+                        <td><strong>{{ forloop.counter }}</strong></td>
+                        <td>{{ item.product.name }}</td>
+                        <td>{{ item.product.category }}</td>
+                        <td>{{ item.total_sold }}</td>
+                        <td>₦{{ item.total_revenue|floatformat:2 }}</td>
+                        <td>₦{{ item.profit_per_unit|floatformat:2 }}</td>
+                        <td>₦{{ item.total_profit|floatformat:2 }}</td>
+                        <td>
+                            <span class="badge {% if item.profit_margin >= 50 %}bg-success{% elif item.profit_margin >= 25 %}bg-primary{% else %}bg-warning{% endif %}">
+                                {{ item.profit_margin|floatformat:1 }}%
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No sales data available for products.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0">📉 Products with No Sales</h5>
+    </div>
+    <div class="card-body">
+        {% if no_sales_products %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Stock</th>
+                        <th>Cost Price</th>
+                        <th>Sell Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in no_sales_products %}
+                    <tr class="table-danger">
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.category }}</td>
+                        <td>{{ product.quantity_in_stock }}</td>
+                        <td>₦{{ product.cost_price|floatformat:2 }}</td>
+                        <td>₦{{ product.selling_price|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-success">Great! All products have been sold at least once.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

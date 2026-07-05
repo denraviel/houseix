@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}{{ expense.expense_number }} - HouseIX Ops{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">{{ expense.expense_number }}</h2>
+    <div class="text-muted">{{ expense.category.name }} expense recorded on {{ expense.expense_date }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    {% if can_edit %}
+    <a href="{% url 'expense_update' expense.pk %}" class="btn btn-outline-primary">Edit</a>
+    {% endif %}
+    {% if can_delete %}
+    <a href="{% url 'expense_delete' expense.pk %}" class="btn btn-outline-danger">Delete</a>
+    {% endif %}
+    {% if can_submit or can_approve %}
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#approvalModal">Workflow Action</button>
+    {% endif %}
+    <a href="{% url 'expense_list' %}" class="btn btn-outline-secondary">Back</a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-8 mb-4">
+    <div class="card mb-4">
+      <div class="card-header">Expense Details</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Category</dt>
+          <dd class="col-sm-8">{{ expense.category.name }}</dd>
+          <dt class="col-sm-4">Vendor</dt>
+          <dd class="col-sm-8">{{ expense.vendor.name|default:"-" }}</dd>
+          <dt class="col-sm-4">Task</dt>
+          <dd class="col-sm-8">{{ expense.task.title|default:"-" }}</dd>
+          <dt class="col-sm-4">Amount</dt>
+          <dd class="col-sm-8">N{{ expense.amount|floatformat:2 }}</dd>
+          <dt class="col-sm-4">Payment Method</dt>
+          <dd class="col-sm-8">{{ expense.get_payment_method_display }}</dd>
+          <dt class="col-sm-4">Status</dt>
+          <dd class="col-sm-8"><span class="badge bg-{{ expense.status_badge_class }}">{{ expense.get_status_display }}</span></dd>
+          <dt class="col-sm-4">Expense Date</dt>
+          <dd class="col-sm-8">{{ expense.expense_date }}</dd>
+          <dt class="col-sm-4">Description</dt>
+          <dd class="col-sm-8">{{ expense.description }}</dd>
+          <dt class="col-sm-4">Notes</dt>
+          <dd class="col-sm-8">{{ expense.notes|default:"-" }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header">Receipt</div>
+      <div class="card-body">
+        {% if expense.receipt %}
+        <div class="mb-2"><a href="{{ expense.receipt.url }}" target="_blank" rel="noopener">{{ expense.receipt_file_name }}</a></div>
+        {% if expense.receipt.name|lower|slice:"-4:" == ".pdf" %}
+        <embed src="{{ expense.receipt.url }}" type="application/pdf" width="100%" height="500" />
+        {% else %}
+        <img src="{{ expense.receipt.url }}" alt="Receipt" class="img-fluid rounded border" />
+        {% endif %}
+        {% else %}
+        <div class="text-muted">No receipt uploaded.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Audit Trail</div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped mb-0">
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>User</th>
+                <th>Notes</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in audit_logs %}
+              <tr>
+                <td>{{ log.get_action_type_display }}</td>
+                <td>{{ log.user_full_name|default:"System" }}</td>
+                <td>{{ log.notes|default:"-" }}</td>
+                <td>{{ log.created_at|date:"Y-m-d H:i" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted">No audit history available.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4 mb-4">
+    <div class="card mb-4">
+      <div class="card-header">Ownership</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5">Recorded By</dt>
+          <dd class="col-sm-7">{{ expense.recorded_by.full_name|default:"-" }}</dd>
+          <dt class="col-sm-5">Created By</dt>
+          <dd class="col-sm-7">{{ expense.created_by.full_name|default:"-" }}</dd>
+          <dt class="col-sm-5">Updated By</dt>
+          <dd class="col-sm-7">{{ expense.updated_by.full_name|default:"-" }}</dd>
+          <dt class="col-sm-5">Approved By</dt>
+          <dd class="col-sm-7">{{ expense.approved_by.full_name|default:"-" }}</dd>
+          <dt class="col-sm-5">Approved At</dt>
+          <dd class="col-sm-7">{{ expense.approved_at|date:"Y-m-d H:i"|default:"-" }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if expense.fuel_log %}
+    <div class="card">
+      <div class="card-header">Fuel Log</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-6">Generator</dt>
+          <dd class="col-sm-6">{{ expense.fuel_log.generator_name }}</dd>
+          <dt class="col-sm-6">Opening</dt>
+          <dd class="col-sm-6">{{ expense.fuel_log.opening_litres }}</dd>
+          <dt class="col-sm-6">Purchased</dt>
+          <dd class="col-sm-6">{{ expense.fuel_log.purchased_litres }}</dd>
+          <dt class="col-sm-6">Closing</dt>
+          <dd class="col-sm-6">{{ expense.fuel_log.closing_litres }}</dd>
+          <dt class="col-sm-6">Hours</dt>
+          <dd class="col-sm-6">{{ expense.fuel_log.generator_hours }}</dd>
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if can_submit or can_approve %}
+{% include 'expenses/partials/approval_modal.html' %}
+{% endif %}
+{% endblock %}

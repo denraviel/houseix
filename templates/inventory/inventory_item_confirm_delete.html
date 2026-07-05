@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Inventory Item - HouseIX Ops{% endblock %}
+
+{% block content %}
+<h2>Delete Inventory Item</h2>
+<div class="card">
+    <div class="card-body">
+        <p>Are you sure you want to delete the inventory item <strong>{{ item.item_name }}</strong>?</p>
+        <div class="mb-3">
+            <p><strong>Category:</strong> {{ item.get_category_display }}</p>
+            <p><strong>Quantity:</strong> {{ item.quantity }} {{ item.unit_type }}</p>
+            <p><strong>Cost Price:</strong> ₦{{ item.cost_price }}</p>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <a href="{% url 'inventory_list' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Expense Dashboard - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Expense Dashboard</h2>
+    <div class="text-muted">
+      Operational spending overview and approval workload.
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'vendor_list' %}" class="btn btn-outline-secondary"
+      >Vendors</a
+    >
+    <a href="{% url 'vendor_create' %}" class="btn btn-outline-primary"
+      >Create Vendor</a
+    >
+    <a href="{% url 'expense_list' %}" class="btn btn-outline-secondary"
+      >View Expenses</a
+    >
+    <a href="{% url 'expense_create' %}" class="btn btn-primary">New Expense</a>
+  </div>
+</div>
+
+<div class="row">
+  {% include 'expenses/partials/expense_summary_card.html' with title="Today's Expenses" value=today_total subtitle="Approved expenses dated today" %}
+  {% include 'expenses/partials/expense_summary_card.html' with title="This Month's Expenses" value=month_total subtitle=month_start|date:"M d, Y" %}
+  {% include 'expenses/partials/expense_summary_card.html' with title="Pending Approval" value=pending_approval_count subtitle="Awaiting owner/admin review" %}
+  {% include 'expenses/partials/expense_summary_card.html' with title="Approved Today" value=approved_today_count subtitle="Approved on today's date" %}
+  {% include 'expenses/partials/expense_summary_card.html' with title="Recurring Expenses Due" value=recurring_due_count subtitle="Schedules ready to generate" %}
+  {% include 'expenses/partials/expense_summary_card.html' with title="Fuel Purchased This Month" value=fuel_purchased_this_month subtitle="Litres from approved diesel logs" %}
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">Quick Links</div>
+  <div class="card-body d-flex flex-wrap gap-2">
+    <a href="{% url 'vendor_list' %}" class="btn btn-outline-secondary"
+      >Manage Vendors</a
+    >
+    <a href="{% url 'vendor_create' %}" class="btn btn-outline-primary"
+      >Create Vendor</a
+    >
+    <a
+      href="{% url 'expense_category_list' %}"
+      class="btn btn-outline-secondary"
+      >Expense Categories</a
+    >
+    <a
+      href="{% url 'recurring_expense_list' %}"
+      class="btn btn-outline-secondary"
+      >Recurring Expenses</a
+    >
+    <a href="{% url 'fuel_log_list' %}" class="btn btn-outline-secondary"
+      >Fuel Logs</a
+    >
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-8 mb-4">
+    <div class="card h-100">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <span>Recent Expenses</span>
+        <a
+          href="{% url 'expense_list' %}"
+          class="btn btn-sm btn-outline-primary"
+          >All Expenses</a
+        >
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Expense</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for expense in recent_expenses %}
+              <tr>
+                <td>
+                  <a href="{% url 'expense_detail' expense.pk %}"
+                    >{{ expense.expense_number|default:"Pending Number" }}</a
+                  >
+                </td>
+                <td>{{ expense.category.name }}</td>
+                <td>N{{ expense.amount|floatformat:2 }}</td>
+                <td>
+                  <span class="badge bg-{{ expense.status_badge_class }}"
+                    >{{ expense.get_status_display }}</span
+                  >
+                </td>
+                <td>{{ expense.expense_date }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted">
+                  No expenses recorded yet.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4 mb-4">
+    <div class="card h-100">
+      <div class="card-header">Expense Categories Breakdown</div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Count</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in category_breakdown %}
+              <tr>
+                <td>{{ row.category__name }}</td>
+                <td>{{ row.count }}</td>
+                <td>N{{ row.total|floatformat:2 }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted">
+                  No approved expenses for this month.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Recent Fuel Logs</span>
+    <a href="{% url 'fuel_log_list' %}" class="btn btn-sm btn-outline-primary"
+      >Fuel Logs</a
+    >
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Expense</th>
+            <th>Generator</th>
+            <th>Purchased Litres</th>
+            <th>Hours</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in recent_fuel_logs %}
+          <tr>
+            <td>{{ log.expense.expense_number }}</td>
+            <td>{{ log.generator_name }}</td>
+            <td>{{ log.purchased_litres }}</td>
+            <td>{{ log.generator_hours }}</td>
+            <td>{{ log.expense.expense_date }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted">
+              No fuel logs available.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

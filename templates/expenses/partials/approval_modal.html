@@ -1,0 +1,26 @@
+{% load crispy_forms_tags %}
+<div class="modal fade" id="approvalModal" tabindex="-1" aria-labelledby="approvalModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'expense_approval' expense.pk %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="approvalModalLabel">Expense Approval</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {{ approval_form|crispy }}
+        </div>
+        <div class="modal-footer">
+          {% if can_submit %}
+          <button type="submit" name="action" value="submit" class="btn btn-warning">Submit for Approval</button>
+          {% endif %}
+          {% if can_approve %}
+          <button type="submit" name="action" value="reject" class="btn btn-outline-danger">Reject</button>
+          <button type="submit" name="action" value="approve" class="btn btn-success">Approve</button>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

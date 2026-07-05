@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Task - HouseIX Ops{% endblock %}
+
+{% block content %}
+<h2>Delete Task</h2>
+
+<div class="alert alert-warning">
+    <div class="fw-semibold">Are you sure you want to delete this task?</div>
+    <div class="mt-2">
+        <div><span class="text-muted">Title:</span> {{ task.title }}</div>
+        <div><span class="text-muted">Assigned To:</span> {{ task.assigned_to.full_name }}</div>
+        <div><span class="text-muted">Due Date:</span> {{ task.due_date }}</div>
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <a href="{% url 'task_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    <button type="submit" class="btn btn-danger">Delete</button>
+</form>
+{% endblock %}

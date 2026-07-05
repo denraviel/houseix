@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Maintenance Categories - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Maintenance Categories</h2>
+    <div class="text-muted">Manage reusable maintenance categories for issue reporting.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'maintenance_dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
+    <a href="{% url 'maintenance_category_create' %}" class="btn btn-primary">New Category</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for category in categories %}
+        <tr>
+          <td>{{ category.name }}</td>
+          <td>{{ category.description|default:"-" }}</td>
+          <td>{% if category.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
+          <td>{{ category.updated_at|date:"Y-m-d H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center text-muted py-4">No maintenance categories found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

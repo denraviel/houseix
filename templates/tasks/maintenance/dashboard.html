@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Maintenance Dashboard - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1">Maintenance Dashboard</h2>
+    <div class="text-muted">Monitor open maintenance issues, repairs, assignments, and verification workload.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'maintenance_issue_list' %}" class="btn btn-outline-secondary">All Issues</a>
+    <a href="{% url 'maintenance_activity_list' %}" class="btn btn-outline-secondary">Activity Log</a>
+    {% if can_manage_categories %}
+    <a href="{% url 'maintenance_category_list' %}" class="btn btn-outline-secondary">Categories</a>
+    {% endif %}
+    {% if can_create_issue %}
+    <a href="{% url 'maintenance_issue_create' %}" class="btn btn-primary">Report Issue</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  {% include 'tasks/maintenance/partials/issue_summary_card.html' with title='Open Issues' value=open_issues_count subtitle='Active maintenance work' %}
+  {% include 'tasks/maintenance/partials/issue_summary_card.html' with title='Emergency Issues' value=emergency_issues_count subtitle='Immediate attention required' %}
+  {% include 'tasks/maintenance/partials/issue_summary_card.html' with title='High Priority' value=high_priority_count subtitle='High-impact issues' %}
+  {% include 'tasks/maintenance/partials/issue_summary_card.html' with title='Waiting Assignment' value=waiting_assignment_count subtitle='Pending staff assignment' %}
+  {% include 'tasks/maintenance/partials/issue_summary_card.html' with title='Waiting Vendor' value=waiting_vendor_count subtitle='External vendor dependency' %}
+  {% include 'tasks/maintenance/partials/issue_summary_card.html' with title='In Progress' value=in_progress_count subtitle='Repairs underway' %}
+  {% include 'tasks/maintenance/partials/issue_summary_card.html' with title='Completed Today' value=completed_today_count subtitle='Resolved today' %}
+  {% include 'tasks/maintenance/partials/issue_summary_card.html' with title='Pending Verification' value=pending_verification_count subtitle='Awaiting inspection' %}
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Recently Reported</span>
+        <a href="{% url 'maintenance_issue_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Issue</th>
+              <th>Category</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Reported</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for issue in recently_reported %}
+            <tr>
+              <td>
+                <a href="{% url 'maintenance_issue_detail' issue.pk %}" class="text-decoration-none fw-semibold">{{ issue.issue_number }}</a>
+                <div class="small text-muted">{{ issue.title }}</div>
+              </td>
+              <td>{{ issue.category.name }}</td>
+              <td><span class="badge bg-{{ issue.priority_badge_class }}">{{ issue.get_priority_display }}</span></td>
+              <td>{% include 'tasks/maintenance/partials/status_badge.html' with issue=issue %}</td>
+              <td>{{ issue.created_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">No maintenance issues reported yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Recent Activities</div>
+      <div class="card-body">
+        {% include 'tasks/maintenance/partials/activity_timeline.html' with activities=recent_activities %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-4">
+      <div class="card-header">Summary</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="text-muted small">Issues Logged This Month</div>
+          <div class="fs-4 fw-semibold">{{ month_issues_count }}</div>
+        </div>
+        <div class="mb-3">
+          <div class="text-muted small">Room With Most Issues</div>
+          {% if room_with_most_issues %}
+          <div class="fw-semibold">Room {{ room_with_most_issues.room__room_number }}</div>
+          <div class="small text-muted">{{ room_with_most_issues.total_issues }} issue(s)</div>
+          {% else %}
+          <div class="text-muted">No room-linked issues yet.</div>
+          {% endif %}
+        </div>
+        <div>
+          <div class="text-muted small mb-2">Top Maintenance Categories</div>
+          <ul class="list-group list-group-flush">
+            {% for row in top_categories %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+              <span>{{ row.category__name }}</span>
+              <span class="badge bg-secondary">{{ row.total_issues }}</span>
+            </li>
+            {% empty %}
+            <li class="list-group-item px-0 text-muted">No category data yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Recent Photos</div>
+      <div class="card-body">
+        {% include 'tasks/maintenance/partials/photo_gallery.html' with photos=recent_photos %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

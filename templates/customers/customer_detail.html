@@ -1,0 +1,130 @@
+{% extends 'base.html' %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Customer</h2>
+  <div>
+    <a href="{% url 'customer_list' %}" class="btn btn-secondary">Back</a>
+    {% if user.role == 'owner' %}
+    <a href="{% url 'customer_update' customer.pk %}" class="btn btn-warning"
+      >Edit</a
+    >
+    <a href="{% url 'customer_delete' customer.pk %}" class="btn btn-danger"
+      >Delete</a
+    >
+    {% elif user.role == 'admin' %}
+    <a href="{% url 'customer_update' customer.pk %}" class="btn btn-warning"
+      >Edit</a
+    >
+    <a href="{% url 'customer_delete' customer.pk %}" class="btn btn-danger"
+      >Delete</a
+    >
+    {% elif user.role == 'manager' %}
+    <a href="{% url 'customer_update' customer.pk %}" class="btn btn-warning"
+      >Edit</a
+    >
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="row mb-2">
+      <div class="col-md-4 text-muted">Customer ID</div>
+      <div class="col-md-8">{{ customer.customer_id }}</div>
+    </div>
+    <div class="row mb-2">
+      <div class="col-md-4 text-muted">Full Name</div>
+      <div class="col-md-8">{{ customer.full_name }}</div>
+    </div>
+    <div class="row mb-2">
+      <div class="col-md-4 text-muted">Phone Number</div>
+      <div class="col-md-8">{{ customer.phone_number }}</div>
+    </div>
+    <div class="row mb-2">
+      <div class="col-md-4 text-muted">Email Address</div>
+      <div class="col-md-8">{{ customer.email|default:"-" }}</div>
+    </div>
+    <div class="row mb-2">
+      <div class="col-md-4 text-muted">Address</div>
+      <div class="col-md-8">{{ customer.address|default:"-" }}</div>
+    </div>
+    <div class="row mb-2">
+      <div class="col-md-4 text-muted">Status</div>
+      <div class="col-md-8">
+        {% if customer.is_active %}
+        <span class="badge bg-success">Active</span>
+        {% else %}
+        <span class="badge bg-secondary">Inactive</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="row mb-0">
+      <div class="col-md-4 text-muted">Created On</div>
+      <div class="col-md-8">{{ customer.created_at|date:"d/m/Y H:i" }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header">Created By</div>
+  <div class="card-body">
+    <div class="row mb-2">
+      <div class="col-md-4 text-muted">Staff Name</div>
+      <div class="col-md-8">
+        {{ customer.created_by_full_name|default:"-" }}
+      </div>
+    </div>
+    <div class="row mb-2">
+      <div class="col-md-4 text-muted">Staff Username</div>
+      <div class="col-md-8">{{ customer.created_by_username|default:"-" }}</div>
+    </div>
+    <div class="row mb-0">
+      <div class="col-md-4 text-muted">Staff Role</div>
+      <div class="col-md-8">{{ customer.created_by_role|default:"-" }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header">Guest History</div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead>
+          <tr>
+            <th>Room</th>
+            <th>Status</th>
+            <th>Checked In By</th>
+            <th>Checked In At</th>
+            <th>Checked Out By</th>
+            <th>Checked Out At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for stay in stays %}
+          <tr>
+            <td>{{ stay.room.room_number }}</td>
+            <td>{{ stay.get_status_display }}</td>
+            <td>{{ stay.checked_in_by_full_name|default:"-" }}</td>
+            <td>{{ stay.checked_in_at|date:"d/m/Y H:i"|default:"-" }}</td>
+            <td>{{ stay.checked_out_by_full_name|default:"-" }}</td>
+            <td>{{ stay.checked_out_at|date:"d/m/Y H:i"|default:"-" }}</td>
+            <td>
+              <a
+                href="{% url 'stay_detail' stay.pk %}"
+                class="btn btn-sm btn-info"
+                >View</a
+              >
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center">No stays found</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

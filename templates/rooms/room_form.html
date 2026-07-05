@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  {% if mode == 'edit' %}
+  <h2>Edit Room</h2>
+  {% else %}
+  <h2>Add Room</h2>
+  {% endif %}
+  <a href="{% url 'room_list' %}" class="btn btn-secondary">Back to Rooms</a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label class="form-label">Room Number</label>
+        {{ form.room_number }}
+        {% if form.room_number.errors %}
+        <div class="text-danger">{{ form.room_number.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Room Type</label>
+        {{ form.room_type }}
+        {% if form.room_type.errors %}
+        <div class="text-danger">{{ form.room_type.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Daily Rate</label>
+        {{ form.daily_rate }}
+        {% if form.daily_rate.errors %}
+        <div class="text-danger">{{ form.daily_rate.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Status</label>
+        {{ form.status }}
+        {% if form.status.errors %}
+        <div class="text-danger">{{ form.status.errors }}</div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

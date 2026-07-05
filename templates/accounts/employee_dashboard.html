@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">{{ dashboard_title }}</h2>
+    {% if user.position_names %}
+    <div class="text-muted">{{ user.get_role_display }} · {{ user.position_names|join:", " }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-3">
+    <div class="card text-center mb-3">
+      <div class="card-body">
+        <div class="fw-semibold text-warning">{{ pending_tasks|length }}</div>
+        <div class="text-muted">Pending Tasks</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center mb-3">
+      <div class="card-body">
+        <div class="fw-semibold text-primary">
+          {{ in_progress_tasks|length }}
+        </div>
+        <div class="text-muted">In Progress</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center mb-3">
+      <div class="card-body">
+        <div class="fw-semibold text-success">{{ completed_tasks|length }}</div>
+        <div class="text-muted">Completed</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center mb-3">
+      <div class="card-body">
+        <div class="fw-semibold">{{ avg_rating|floatformat:1 }}</div>
+        <div class="text-muted">Average Rating</div>
+        <div class="small text-muted">{{ category }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-2">
+  <div class="col-md-8">
+    <div class="card">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <span>My Tasks</span>
+        <a href="{% url 'my_tasks' %}" class="btn btn-sm btn-outline-primary"
+          >Open</a
+        >
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="fw-semibold mb-2">Pending</div>
+            <ul class="list-group list-group-flush">
+              {% for task in pending_tasks|slice:":5" %}
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span class="text-truncate">{{ task.title }}</span>
+                <a
+                  href="{% url 'staff_task_update' task.pk %}"
+                  class="btn btn-sm btn-outline-secondary"
+                  >Update</a
+                >
+              </li>
+              {% empty %}
+              <li class="list-group-item text-muted">No pending tasks.</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="col-md-4">
+            <div class="fw-semibold mb-2">In Progress</div>
+            <ul class="list-group list-group-flush">
+              {% for task in in_progress_tasks|slice:":5" %}
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span class="text-truncate">{{ task.title }}</span>
+                <a
+                  href="{% url 'staff_task_update' task.pk %}"
+                  class="btn btn-sm btn-outline-secondary"
+                  >Update</a
+                >
+              </li>
+              {% empty %}
+              <li class="list-group-item text-muted">No tasks in progress.</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="col-md-4">
+            <div class="fw-semibold mb-2">Completed</div>
+            <ul class="list-group list-group-flush">
+              {% for task in completed_tasks|slice:":5" %}
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span class="text-truncate">{{ task.title }}</span>
+                <a
+                  href="{% url 'staff_task_update' task.pk %}"
+                  class="btn btn-sm btn-outline-secondary"
+                  >View</a
+                >
+              </li>
+              {% empty %}
+              <li class="list-group-item text-muted">No completed tasks.</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <span>Latest Ratings</span>
+        <a
+          href="{% url 'my_performance' %}"
+          class="btn btn-sm btn-outline-primary"
+          >Open</a
+        >
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for rating in ratings %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between">
+              <span class="fw-semibold">{{ rating.task.title }}</span>
+              <span class="badge bg-dark">{{ rating.rating }}</span>
+            </div>
+            <div class="text-muted small">
+              {{ rating.date_rated|date:"M d, Y" }}
+            </div>
+            {% if rating.comment %}
+            <div class="small">{{ rating.comment }}</div>
+            {% endif %}
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No ratings yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if dashboard_widgets %}
+<div class="card mt-4">
+  <div class="card-header">Operational Access</div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for widget in dashboard_widgets %}
+      <div class="col-md-6 col-xl-4">
+        <div class="border rounded p-3 h-100">
+          <div class="fw-semibold">{{ widget.title }}</div>
+          <div class="text-muted small mb-2">{{ widget.subtitle }}</div>
+          <a href="{{ widget.url }}" class="btn btn-sm btn-outline-primary">Open</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
