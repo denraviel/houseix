@@ -1,6 +1,7 @@
 # Contributing to hmoo
 
 ## Branch Strategy
+
 - `main`: deployable production branch
 - `develop`: integration branch for approved work
 - `feature/*`: isolated feature development
@@ -8,6 +9,7 @@
 - `hotfix/*`: urgent fixes against production
 
 ## Local Setup
+
 1. Create a virtual environment.
 2. Install development dependencies:
 
@@ -20,6 +22,7 @@ pip install -r requirements-dev.txt
 5. Run `python manage.py test`.
 
 ## Coding Standards
+
 - Preserve the existing service-layer architecture.
 - Keep Django class-based views thin.
 - Put business logic in services, selectors, validators, and mixins where appropriate.
@@ -38,19 +41,29 @@ python manage.py test
 ```
 
 ## Commit Guidelines
+
 - Use small, focused commits.
 - Keep migrations with the code that requires them.
 - Write commit messages in imperative mood.
 
 ## Pull Request Expectations
+
 - Explain the problem and the solution.
 - Mention schema changes, migrations, and verification steps.
 - Include screenshots for UI changes when relevant.
 - Note any follow-up work explicitly.
 
 ## Release Flow
+
 1. Merge feature branches into `develop`.
 2. Cut a `release/*` branch.
 3. Stabilize, test, and document.
 4. Merge into `main`.
-5. Tag the release using semantic versioning.
+5. Tag the release from `main` using semantic versioning.
+6. Merge any release-only fixes back into `develop`.
+
+## Default Branch Usage
+
+- Use `develop` as the default working branch for day-to-day development.
+- Keep `main` reserved for production-ready code only.
+- Start all new feature branches from `develop` unless you are making a production hotfix.
