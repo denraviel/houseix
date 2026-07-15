@@ -6,68 +6,174 @@ from django.db import transaction
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
-from .models import AuditLog, CustomUser, JobPosition
+from .models import AuditLog, CustomUser, JobPosition, ModulePermission
+
+
+class ModulePermissionService:
+    DEFAULT_ALWAYS_AVAILABLE_CODES = {'dashboard', 'accounts', 'settings'}
+
+    @classmethod
+    def active_modules_queryset(cls):
+        return ModulePermission.objects.filter(is_active=True).order_by('display_order', 'name')
+
+    @classmethod
+    def active_modules_by_code(cls):
+        return {module.code: module for module in cls.active_modules_queryset()}
+
+    @classmethod
+    def get_explicit_module_codes(cls, user):
+        if not getattr(user, 'is_authenticated', False):
+            return set()
+        return set(
+            user.module_permissions.filter(is_active=True).values_list('code', flat=True)
+        )
+
+    @classmethod
+    def get_accessible_module_codes(cls, user):
+        if not getattr(user, 'is_authenticated', False):
+            return set()
+        active_codes = set(cls.active_modules_by_code())
+        if not active_codes:
+            return set()
+        if getattr(user, 'role', '') == 'owner':
+            return active_codes
+        default_codes = active_codes & cls.DEFAULT_ALWAYS_AVAILABLE_CODES
+        explicit_codes = cls.get_explicit_module_codes(user) & active_codes
+        if getattr(user, 'role', '') == 'admin' and not getattr(user, 'module_permissions_configured', False):
+            return active_codes
+        return default_codes | explicit_codes
+
+    @classmethod
+    def can_access_module(cls, user, module_code):
+        return module_code in cls.get_accessible_module_codes(user)
+
+    @staticmethod
+    def resolve_dashboard_url_name(user):
+        return 'admin_dashboard' if getattr(user, 'role', '') in ['owner', 'admin', 'manager'] else 'employee_dashboard'
+
+    @classmethod
+    def resolve_module_url_name(cls, module, user):
+        if module.code == 'dashboard':
+            return cls.resolve_dashboard_url_name(user)
+        if module.code == 'performance':
+            return 'my_performance' if getattr(user, 'role', '') == 'staff' else 'performance_reports'
+        return module.module_url_name or ''
+
+    @classmethod
+    def get_menu_items(cls, user):
+        accessible_codes = cls.get_accessible_module_codes(user)
+        items = []
+        excluded_codes = {'accounts', 'settings'}
+        for module in cls.active_modules_queryset():
+            if module.code not in accessible_codes or module.code in excluded_codes:
+                continue
+            url_name = cls.resolve_module_url_name(module, user)
+            if not url_name:
+                continue
+            try:
+                url = reverse(url_name)
+            except NoReverseMatch:
+                continue
+            items.append(
+                {
+                    'code': module.code,
+                    'label': module.name,
+                    'icon': module.icon,
+                    'url_name': url_name,
+                    'url': url,
+                }
+            )
+        return items
+
+    @classmethod
+    def get_dashboard_widgets(cls, user):
+        accessible_codes = cls.get_accessible_module_codes(user)
+        widgets = []
+        excluded_codes = {'dashboard', 'accounts', 'settings', 'audit_logs', 'activity_logs', 'administration'}
+        for module in cls.active_modules_queryset():
+            if module.code not in accessible_codes or module.code in excluded_codes:
+                continue
+            url_name = cls.resolve_module_url_name(module, user)
+            if not url_name:
+                continue
+            try:
+                url = reverse(url_name)
+            except NoReverseMatch:
+                continue
+            widgets.append(
+                {
+                    'code': module.code,
+                    'title': module.name,
+                    'subtitle': module.description or f'Open the {module.name.lower()} workspace.',
+                    'icon': module.icon,
+                    'url_name': url_name,
+                    'url': url,
+                }
+            )
+        return widgets[:6]
+
+    @classmethod
+    @transaction.atomic
+    def sync_user_module_permissions(cls, *, user, module_permissions, actor):
+        desired_permissions = list(
+            ModulePermission.objects.filter(
+                pk__in=[permission.pk for permission in module_permissions],
+                is_active=True,
+            ).order_by('display_order', 'name')
+        )
+        existing_codes = set(user.module_permissions.filter(is_active=True).values_list('code', flat=True))
+        desired_codes = {permission.code for permission in desired_permissions}
+
+        user.module_permissions.set(desired_permissions)
+        if not user.module_permissions_configured:
+            user.module_permissions_configured = True
+            user.save(update_fields=['module_permissions_configured'])
+
+        granted = sorted(desired_codes - existing_codes)
+        revoked = sorted(existing_codes - desired_codes)
+        for module_code in granted:
+            AuditLog.log(actor, 'module_permission_granted', f'Granted {module_code} access to {user.email}.')
+        for module_code in revoked:
+            AuditLog.log(actor, 'module_permission_revoked', f'Revoked {module_code} access from {user.email}.')
+
+        summary = ', '.join(sorted(desired_codes)) if desired_codes else 'default-only access'
+        AuditLog.log(actor, 'user_module_permissions_updated', f'Updated module permissions for {user.email}: {summary}.')
+        return user
 
 
 class NavigationService:
     MODULE_DASHBOARD = 'dashboard'
-    MODULE_STAFF_MANAGEMENT = 'staff_management'
-    MODULE_PRODUCTS = 'products'
-    MODULE_INVENTORY = 'inventory'
+    MODULE_REPORTS = 'reports'
+    MODULE_EXPENSES = 'expenses'
     MODULE_SALES = 'sales'
+    MODULE_INVENTORY = 'inventory'
+    MODULE_PRODUCTS = 'products'
+    MODULE_INVOICES = 'invoices'
     MODULE_CUSTOMERS = 'customers'
     MODULE_ROOMS = 'rooms'
     MODULE_STAYS = 'stays'
-    MODULE_INVOICES = 'invoices'
-    MODULE_EXPENSES = 'expenses'
     MODULE_TASKS = 'tasks'
     MODULE_MY_TASKS = 'my_tasks'
-    MODULE_MAINTENANCE = 'maintenance'
     MODULE_INSPECTIONS = 'inspections'
+    MODULE_MAINTENANCE = 'maintenance'
     MODULE_PERFORMANCE = 'performance'
-    MODULE_REPORTS = 'reports'
-
-    MODULE_MENU_ORDER = [
-        MODULE_DASHBOARD,
-        MODULE_STAFF_MANAGEMENT,
-        MODULE_PRODUCTS,
-        MODULE_INVENTORY,
-        MODULE_SALES,
-        MODULE_CUSTOMERS,
-        MODULE_ROOMS,
-        MODULE_STAYS,
-        MODULE_INVOICES,
-        MODULE_EXPENSES,
-        MODULE_TASKS,
-        MODULE_MY_TASKS,
-        MODULE_MAINTENANCE,
-        MODULE_INSPECTIONS,
-        MODULE_PERFORMANCE,
-        MODULE_REPORTS,
-    ]
-
-    MODULE_DEFINITIONS = {
-        MODULE_DASHBOARD: {'label': 'Dashboard'},
-        MODULE_STAFF_MANAGEMENT: {'label': 'Staff Management', 'url_name': 'staff_list'},
-        MODULE_PRODUCTS: {'label': 'Products', 'url_name': 'product_list'},
-        MODULE_INVENTORY: {'label': 'Inventory', 'url_name': 'inventory_list'},
-        MODULE_SALES: {'label': 'Sales', 'url_name': 'sales_list'},
-        MODULE_CUSTOMERS: {'label': 'Customers', 'url_name': 'customer_list'},
-        MODULE_ROOMS: {'label': 'Rooms', 'url_name': 'room_list'},
-        MODULE_STAYS: {'label': 'Guest Stays', 'url_name': 'stay_list'},
-        MODULE_INVOICES: {'label': 'Invoices', 'url_name': 'invoice_list'},
-        MODULE_EXPENSES: {'label': 'Expenses', 'url_name': 'expense_dashboard'},
-        MODULE_TASKS: {'label': 'Tasks', 'url_name': 'task_list'},
-        MODULE_MY_TASKS: {'label': 'My Tasks', 'url_name': 'my_tasks'},
-        MODULE_MAINTENANCE: {'label': 'Maintenance', 'url_name': 'maintenance_dashboard'},
-        MODULE_INSPECTIONS: {'label': 'Inspections', 'url_name': 'inspection_list'},
-        MODULE_PERFORMANCE: {'label': 'Performance', 'url_name': 'my_performance'},
-        MODULE_REPORTS: {'label': 'Reports', 'url_name': 'reports_dashboard'},
-    }
+    MODULE_STAFF_MANAGEMENT = 'staff_management'
+    MODULE_ACCOUNTS = 'accounts'
+    MODULE_SETTINGS = 'settings'
+    MODULE_AUDIT_LOGS = 'audit_logs'
+    MODULE_ACTIVITY_LOGS = 'activity_logs'
+    MODULE_ADMINISTRATION = 'administration'
 
     URL_NAME_TO_MODULE = {
+        'home': MODULE_DASHBOARD,
         'admin_dashboard': MODULE_DASHBOARD,
         'employee_dashboard': MODULE_DASHBOARD,
+        'profile': MODULE_ACCOUNTS,
+        'profile_edit': MODULE_ACCOUNTS,
+        'account_settings': MODULE_SETTINGS,
+        'change_password': MODULE_SETTINGS,
+        'change_email': MODULE_SETTINGS,
+        'change_username': MODULE_SETTINGS,
         'staff_list': MODULE_STAFF_MANAGEMENT,
         'staff_create': MODULE_STAFF_MANAGEMENT,
         'staff_edit': MODULE_STAFF_MANAGEMENT,
@@ -167,49 +273,6 @@ class NavigationService:
         'activity_report': MODULE_REPORTS,
     }
 
-    STAFF_ROLE_FALLBACK_MODULES = {
-        MODULE_DASHBOARD,
-        MODULE_SALES,
-        MODULE_INVENTORY,
-        MODULE_CUSTOMERS,
-        MODULE_ROOMS,
-        MODULE_STAYS,
-        MODULE_INVOICES,
-        MODULE_EXPENSES,
-        MODULE_MY_TASKS,
-        MODULE_MAINTENANCE,
-        MODULE_PERFORMANCE,
-    }
-    MANAGER_ROLE_FALLBACK_MODULES = set(MODULE_MENU_ORDER) - {MODULE_MY_TASKS}
-
-    STAFF_DEPARTMENT_MODULES = {
-        JobPosition.DEPARTMENT_FRONT_OFFICE: {MODULE_DASHBOARD, MODULE_STAYS, MODULE_CUSTOMERS, MODULE_ROOMS, MODULE_INVOICES, MODULE_MY_TASKS},
-        JobPosition.DEPARTMENT_HOUSEKEEPING: {MODULE_DASHBOARD, MODULE_MY_TASKS, MODULE_MAINTENANCE, MODULE_PERFORMANCE},
-        JobPosition.DEPARTMENT_MAINTENANCE: {MODULE_DASHBOARD, MODULE_MY_TASKS, MODULE_MAINTENANCE, MODULE_PERFORMANCE},
-        JobPosition.DEPARTMENT_SECURITY: {MODULE_DASHBOARD, MODULE_MY_TASKS, MODULE_MAINTENANCE},
-        JobPosition.DEPARTMENT_FOOD_BEVERAGE: {MODULE_DASHBOARD, MODULE_SALES, MODULE_INVENTORY, MODULE_MY_TASKS},
-        JobPosition.DEPARTMENT_STORE: {MODULE_DASHBOARD, MODULE_INVENTORY, MODULE_PRODUCTS, MODULE_MY_TASKS},
-        JobPosition.DEPARTMENT_FINANCE: {MODULE_DASHBOARD, MODULE_INVOICES, MODULE_EXPENSES, MODULE_REPORTS, MODULE_MY_TASKS},
-        JobPosition.DEPARTMENT_SALES_MARKETING: {MODULE_DASHBOARD, MODULE_SALES, MODULE_CUSTOMERS, MODULE_REPORTS, MODULE_MY_TASKS},
-        JobPosition.DEPARTMENT_DRIVER: {MODULE_DASHBOARD, MODULE_MY_TASKS},
-        JobPosition.DEPARTMENT_GENERAL_STAFF: {MODULE_DASHBOARD, MODULE_MY_TASKS, MODULE_PERFORMANCE},
-        JobPosition.DEPARTMENT_GENERAL_MANAGEMENT: STAFF_ROLE_FALLBACK_MODULES,
-    }
-
-    MANAGER_DEPARTMENT_MODULES = {
-        JobPosition.DEPARTMENT_GENERAL_MANAGEMENT: set(MODULE_MENU_ORDER) - {MODULE_MY_TASKS},
-        JobPosition.DEPARTMENT_FRONT_OFFICE: {MODULE_DASHBOARD, MODULE_CUSTOMERS, MODULE_ROOMS, MODULE_STAYS, MODULE_INVOICES, MODULE_TASKS, MODULE_REPORTS},
-        JobPosition.DEPARTMENT_HOUSEKEEPING: {MODULE_DASHBOARD, MODULE_TASKS, MODULE_INSPECTIONS, MODULE_MAINTENANCE, MODULE_PERFORMANCE, MODULE_REPORTS},
-        JobPosition.DEPARTMENT_MAINTENANCE: {MODULE_DASHBOARD, MODULE_TASKS, MODULE_MAINTENANCE, MODULE_PERFORMANCE, MODULE_REPORTS},
-        JobPosition.DEPARTMENT_SECURITY: {MODULE_DASHBOARD, MODULE_TASKS, MODULE_MAINTENANCE, MODULE_REPORTS},
-        JobPosition.DEPARTMENT_FOOD_BEVERAGE: {MODULE_DASHBOARD, MODULE_PRODUCTS, MODULE_INVENTORY, MODULE_SALES, MODULE_TASKS, MODULE_REPORTS},
-        JobPosition.DEPARTMENT_STORE: {MODULE_DASHBOARD, MODULE_PRODUCTS, MODULE_INVENTORY, MODULE_TASKS, MODULE_REPORTS},
-        JobPosition.DEPARTMENT_FINANCE: {MODULE_DASHBOARD, MODULE_INVOICES, MODULE_EXPENSES, MODULE_REPORTS, MODULE_TASKS},
-        JobPosition.DEPARTMENT_SALES_MARKETING: {MODULE_DASHBOARD, MODULE_CUSTOMERS, MODULE_SALES, MODULE_REPORTS, MODULE_TASKS},
-        JobPosition.DEPARTMENT_DRIVER: {MODULE_DASHBOARD, MODULE_TASKS},
-        JobPosition.DEPARTMENT_GENERAL_STAFF: {MODULE_DASHBOARD, MODULE_TASKS, MODULE_REPORTS},
-    }
-
     @staticmethod
     def _user_positions(user):
         if not getattr(user, 'is_authenticated', False):
@@ -220,35 +283,21 @@ class NavigationService:
 
     @classmethod
     def get_accessible_modules(cls, user):
-        if not getattr(user, 'is_authenticated', False):
-            return set()
-        role = getattr(user, 'role', '')
-        if role in ['owner', 'admin']:
-            return set(cls.MODULE_MENU_ORDER)
-
-        positions = cls._user_positions(user)
-        if not positions:
-            return cls.MANAGER_ROLE_FALLBACK_MODULES.copy() if role == 'manager' else cls.STAFF_ROLE_FALLBACK_MODULES.copy()
-
-        if role == 'manager':
-            modules = {cls.MODULE_DASHBOARD, cls.MODULE_TASKS}
-            for position in positions:
-                modules.update(cls.MANAGER_DEPARTMENT_MODULES.get(position.department, {cls.MODULE_DASHBOARD, cls.MODULE_TASKS}))
-            return modules
-        if role == 'staff':
-            modules = {cls.MODULE_DASHBOARD, cls.MODULE_MY_TASKS}
-            for position in positions:
-                modules.update(cls.STAFF_DEPARTMENT_MODULES.get(position.department, {cls.MODULE_DASHBOARD, cls.MODULE_MY_TASKS}))
-            return modules
-        return set(cls.MODULE_MENU_ORDER)
+        return ModulePermissionService.get_accessible_module_codes(user)
 
     @classmethod
     def can_access_module(cls, user, module_code):
-        return module_code in cls.get_accessible_modules(user)
+        return ModulePermissionService.can_access_module(user, module_code)
 
     @classmethod
     def get_module_for_url_name(cls, url_name):
-        return cls.URL_NAME_TO_MODULE.get(url_name)
+        module_code = cls.URL_NAME_TO_MODULE.get(url_name)
+        if module_code:
+            return module_code
+        try:
+            return ModulePermission.objects.get(is_active=True, module_url_name=url_name).code
+        except ModulePermission.DoesNotExist:
+            return None
 
     @classmethod
     def can_access_url_name(cls, user, url_name):
@@ -259,7 +308,7 @@ class NavigationService:
 
     @staticmethod
     def get_dashboard_url_name(user):
-        return 'admin_dashboard' if getattr(user, 'role', '') in ['owner', 'admin', 'manager'] else 'employee_dashboard'
+        return ModulePermissionService.resolve_dashboard_url_name(user)
 
     @staticmethod
     def get_performance_url_name(user):
@@ -277,71 +326,11 @@ class NavigationService:
 
     @classmethod
     def get_menu_items(cls, user):
-        modules = cls.get_accessible_modules(user)
-        items = []
-        for module_code in cls.MODULE_MENU_ORDER:
-            if module_code not in modules:
-                continue
-            definition = dict(cls.MODULE_DEFINITIONS[module_code])
-            if module_code == cls.MODULE_DASHBOARD:
-                url_name = cls.get_dashboard_url_name(user)
-            elif module_code == cls.MODULE_PERFORMANCE:
-                url_name = cls.get_performance_url_name(user)
-            else:
-                url_name = definition.get('url_name')
-            if not url_name:
-                continue
-            try:
-                url = reverse(url_name)
-            except NoReverseMatch:
-                continue
-            items.append(
-                {
-                    'code': module_code,
-                    'label': definition['label'],
-                    'url_name': url_name,
-                    'url': url,
-                }
-            )
-        return items
+        return ModulePermissionService.get_menu_items(user)
 
     @classmethod
     def get_dashboard_widgets(cls, user):
-        modules = cls.get_accessible_modules(user)
-        widgets = []
-        widget_map = {
-            cls.MODULE_MY_TASKS: ('Assigned Tasks', 'Track and update your operational work.', 'my_tasks'),
-            cls.MODULE_TASKS: ('Task Management', 'Assign and monitor department work.', 'task_list'),
-            cls.MODULE_INSPECTIONS: ('Inspections', 'Review checklist audits and quality control.', 'inspection_list'),
-            cls.MODULE_MAINTENANCE: ('Maintenance', 'View repair issues and status updates.', 'maintenance_dashboard'),
-            cls.MODULE_SALES: ('Sales', 'Open the sales workflow for active operations.', 'sales_list'),
-            cls.MODULE_INVENTORY: ('Inventory', 'Monitor stock and movements for your area.', 'inventory_list'),
-            cls.MODULE_CUSTOMERS: ('Customers', 'Open guest and customer records.', 'customer_list'),
-            cls.MODULE_ROOMS: ('Rooms', 'Review room inventory and availability.', 'room_list'),
-            cls.MODULE_STAYS: ('Guest Stays', 'Handle reservations, check-in, and check-out.', 'stay_list'),
-            cls.MODULE_INVOICES: ('Invoices', 'Access invoice history and billing workflows.', 'invoice_list'),
-            cls.MODULE_EXPENSES: ('Expenses', 'Review operational costs and submissions.', 'expense_dashboard'),
-            cls.MODULE_REPORTS: ('Reports', 'View management and analytical reports.', 'reports_dashboard'),
-            cls.MODULE_PERFORMANCE: ('Performance', 'Open performance ratings and history.', 'my_performance' if getattr(user, 'role', '') == 'staff' else 'performance_reports'),
-        }
-        for module_code in cls.MODULE_MENU_ORDER:
-            if module_code not in modules or module_code not in widget_map:
-                continue
-            title, subtitle, url_name = widget_map[module_code]
-            try:
-                url = reverse(url_name)
-            except NoReverseMatch:
-                continue
-            widgets.append(
-                {
-                    'code': module_code,
-                    'title': title,
-                    'subtitle': subtitle,
-                    'url_name': url_name,
-                    'url': url,
-                }
-            )
-        return widgets[:6]
+        return ModulePermissionService.get_dashboard_widgets(user)
 
 
 class AccountProfileService:
@@ -497,6 +486,14 @@ class AccountOnboardingService:
         user.password_changed_at = timezone.now()
         user.save()
         user.positions.set(cleaned_data.get('positions') or [])
+        if 'module_permissions' in cleaned_data:
+            selected_permissions = cleaned_data.get('module_permissions') or []
+            if not (user.role == 'admin' and not selected_permissions):
+                ModulePermissionService.sync_user_module_permissions(
+                    user=user,
+                    module_permissions=selected_permissions,
+                    actor=actor,
+                )
         AuditLog.log(actor, 'user_created', f'Created user {user.email} ({user.role}).')
         return user
 
@@ -512,6 +509,12 @@ class AccountOnboardingService:
         user.is_active = cleaned_data['is_active']
         user.save()
         user.positions.set(cleaned_data.get('positions') or [])
+        if 'module_permissions' in cleaned_data:
+            ModulePermissionService.sync_user_module_permissions(
+                user=user,
+                module_permissions=cleaned_data.get('module_permissions') or [],
+                actor=actor,
+            )
         AuditLog.log(actor, 'user_edited', f'Edited user {user.email} ({user.role}).')
         return user
 

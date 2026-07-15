@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
-from accounts.models import CustomUser, JobPosition
+from accounts.models import CustomUser, JobPosition, ModulePermission
 from rooms.models import Room
 
 from .forms import TaskForm
@@ -14,6 +14,7 @@ from .services import InspectionWorkflowService, MaintenanceIssueService, Mainte
 class InspectionWorkflowTests(TestCase):
     def setUp(self):
         self.cleaner_position = JobPosition.objects.get(code='cleaner')
+        self.my_tasks_module = ModulePermission.objects.get(code='my_tasks')
         self.manager = CustomUser.objects.create_user(
             email='manager@example.com',
             password='password123',
@@ -28,6 +29,7 @@ class InspectionWorkflowTests(TestCase):
             phone_number='08000000002',
             role='staff',
             position=self.cleaner_position,
+            module_permissions=[self.my_tasks_module],
         )
         self.room = Room.objects.create(
             room_number='101',
@@ -143,6 +145,7 @@ class MaintenanceWorkflowTests(TestCase):
     def setUp(self):
         self.maintenance_position = JobPosition.objects.get(code='maintenance_technician')
         self.security_position = JobPosition.objects.get(code='security_officer')
+        self.maintenance_module = ModulePermission.objects.get(code='maintenance')
         self.owner = CustomUser.objects.create_user(
             email='owner@example.com',
             password='password123',
@@ -171,6 +174,7 @@ class MaintenanceWorkflowTests(TestCase):
             phone_number='08000000014',
             role='staff',
             position=self.maintenance_position,
+            module_permissions=[self.maintenance_module],
         )
         self.room = Room.objects.create(
             room_number='203',
@@ -253,6 +257,28 @@ class MaintenanceWorkflowTests(TestCase):
         self.assertContains(response, assigned_issue.issue_number)
         self.assertNotContains(response, hidden_issue.issue_number)
 
+    def test_owner_can_open_maintenance_issue_edit_page(self):
+        issue = MaintenanceIssueService.create_issue(
+            cleaned_data={
+                'title': 'AC not cooling',
+                'description': 'Room 203 air conditioner is blowing warm air.',
+                'category': self.category,
+                'priority': MaintenanceIssue.PRIORITY_HIGH,
+                'room': self.room,
+                'requires_external_vendor': False,
+                'requires_expense': False,
+                'photo_captions': '',
+            },
+            user=self.manager,
+            uploaded_files=[],
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse('maintenance_issue_update', args=[issue.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, issue.title)
+
     def test_linked_task_completion_marks_issue_completed(self):
         issue = MaintenanceIssueService.create_issue(
             cleaned_data={
@@ -308,6 +334,7 @@ class MaintenanceWorkflowTests(TestCase):
             phone_number='08000000015',
             role='staff',
             position=cleaner_position,
+            module_permissions=[self.maintenance_module],
         )
 
         task = Task(
@@ -334,6 +361,7 @@ class MaintenanceWorkflowTests(TestCase):
             phone_number='08000000016',
             role='staff',
             positions=[self.security_position, self.maintenance_position],
+            module_permissions=[self.maintenance_module],
         )
 
         required_positions = JobPosition.objects.filter(pk__in=[self.maintenance_position.pk, self.security_position.pk])

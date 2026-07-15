@@ -16,6 +16,7 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('The Email field must be set')
         positions = extra_fields.pop('positions', None)
         legacy_position = extra_fields.pop('position', None)
+        module_permissions = extra_fields.pop('module_permissions', None)
         extra_fields.setdefault('is_first_login', False)
         email = self.normalize_email(email)
         username = extra_fields.get('username')
@@ -30,6 +31,10 @@ class CustomUserManager(BaseUserManager):
             user.positions.set(positions)
         elif legacy_position is not None:
             user.positions.set([legacy_position])
+        if module_permissions is not None:
+            user.module_permissions.set(module_permissions)
+            user.module_permissions_configured = True
+            user.save(update_fields=['module_permissions_configured'])
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
@@ -107,6 +112,22 @@ class JobPosition(AccountTrackedModel):
         return self.name
 
 
+class ModulePermission(AccountTrackedModel):
+    name = models.CharField(max_length=150, unique=True)
+    code = models.CharField(max_length=50, unique=True, db_index=True)
+    description = models.TextField(blank=True)
+    module_url_name = models.CharField(max_length=100, blank=True)
+    icon = models.CharField(max_length=100, blank=True)
+    display_order = models.PositiveIntegerField(default=0, db_index=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['display_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
 class CustomUser(AbstractUser):
     ROLE_CHOICES = (
         ('owner', 'Owner'),
@@ -130,8 +151,14 @@ class CustomUser(AbstractUser):
     is_first_login = models.BooleanField(default=True)
     password_changed_at = models.DateTimeField(null=True, blank=True)
     email_verified = models.BooleanField(default=False)
+    module_permissions_configured = models.BooleanField(default=False)
     positions = models.ManyToManyField(
         JobPosition,
+        blank=True,
+        related_name='users',
+    )
+    module_permissions = models.ManyToManyField(
+        ModulePermission,
         blank=True,
         related_name='users',
     )
@@ -191,6 +218,11 @@ class AuditLog(models.Model):
         ('password_reset', 'Password Reset by Admin'),
         ('profile_updated', 'Profile Updated'),
         ('profile_photo_updated', 'Profile Picture Updated'),
+        ('module_permission_created', 'Module Permission Created'),
+        ('module_permission_disabled', 'Module Permission Disabled'),
+        ('module_permission_granted', 'Module Permission Granted'),
+        ('module_permission_revoked', 'Module Permission Revoked'),
+        ('user_module_permissions_updated', 'User Module Permissions Updated'),
         ('product_created', 'Product Created'),
         ('product_updated', 'Product Updated'),
         ('product_deleted', 'Product Deleted'),

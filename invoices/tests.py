@@ -84,7 +84,11 @@ class InvoiceModuleTests(TestCase):
             InvoiceGeneratorService.generate(stay=stay, user=self.manager)
 
     def test_invoice_reads_room_and_product_totals_from_existing_sources(self):
-        stay = self._create_stay()
+        stay = self._create_stay(
+            status=GuestStay.STATUS_CHECKED_IN,
+            check_in_days_ago=3,
+            check_out_days_ago=None,
+        )
         Sale.objects.create(
             stay=stay,
             product=self.product,
@@ -94,6 +98,9 @@ class InvoiceModuleTests(TestCase):
             unit_price=Decimal('0.00'),
             total_amount=Decimal('0.00'),
         )
+        stay.status = GuestStay.STATUS_CHECKED_OUT
+        stay.check_out_date = timezone.localdate() - timedelta(days=1)
+        stay.save(update_fields=['status', 'check_out_date', 'updated_at'])
         invoice = InvoiceGeneratorService.generate(stay=stay, user=self.manager)
 
         self.assertEqual(invoice.billable_days, 2)
@@ -114,7 +121,11 @@ class InvoiceModuleTests(TestCase):
         self.assertEqual(invoice.room_charge_total, Decimal('30000.00'))
 
     def test_payment_updates_balances_and_invoice_status(self):
-        stay = self._create_stay()
+        stay = self._create_stay(
+            status=GuestStay.STATUS_CHECKED_IN,
+            check_in_days_ago=3,
+            check_out_days_ago=None,
+        )
         Sale.objects.create(
             stay=stay,
             product=self.product,
@@ -124,6 +135,9 @@ class InvoiceModuleTests(TestCase):
             unit_price=Decimal('0.00'),
             total_amount=Decimal('0.00'),
         )
+        stay.status = GuestStay.STATUS_CHECKED_OUT
+        stay.check_out_date = timezone.localdate() - timedelta(days=1)
+        stay.save(update_fields=['status', 'check_out_date', 'updated_at'])
         invoice = InvoiceGeneratorService.generate(stay=stay, user=self.manager)
 
         InvoicePaymentService.record_payment(

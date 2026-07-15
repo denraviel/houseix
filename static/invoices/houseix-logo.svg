@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" role="img" aria-labelledby="houseixLogoTitle">
+  <title id="houseixLogoTitle">House IX logo</title>
+  <g fill="none" stroke="#E9AE52" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
+    <path d="M95 62 L179 8 L263 62" />
+    <path d="M167 23 L209 8 L306 62" />
+    <path d="M130 42 L130 20 L145 20 L145 33" />
+  </g>
+  <text
+    x="210"
+    y="105"
+    fill="#E9AE52"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="34"
+    letter-spacing="14"
+    text-anchor="middle"
+  >
+    HOUSE IX
+  </text>
+</svg>

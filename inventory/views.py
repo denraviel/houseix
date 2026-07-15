@@ -1,11 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from accounts.permissions import module_permission_required
+from accounts.services import NavigationService
 from .models import InventoryItem, StockMovement
 from .forms import InventoryItemForm, StockMovementForm, AddStockForm
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_INVENTORY)
 def inventory_list(request):
     if request.user.role not in ['owner', 'admin', 'manager', 'staff']:
         messages.error(request, 'You are not authorized to access inventory.')
@@ -18,6 +21,7 @@ def inventory_list(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_INVENTORY)
 def inventory_item_create(request):
     if request.user.role not in ['owner', 'admin']:
         messages.error(request, 'You are not authorized to add inventory items.')
@@ -37,6 +41,7 @@ def inventory_item_create(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_INVENTORY)
 def inventory_item_edit(request, pk):
     item = get_object_or_404(InventoryItem, pk=pk)
     if request.user.role not in ['owner', 'admin', 'manager']:
@@ -57,6 +62,7 @@ def inventory_item_edit(request, pk):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_INVENTORY)
 def add_stock(request, pk):
     item = get_object_or_404(InventoryItem, pk=pk)
     if request.user.role not in ['owner', 'admin', 'manager']:
@@ -79,6 +85,7 @@ def add_stock(request, pk):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_INVENTORY)
 def inventory_item_delete(request, pk):
     item = get_object_or_404(InventoryItem, pk=pk)
     if request.user.role not in ['owner', 'admin']:
@@ -95,6 +102,7 @@ def inventory_item_delete(request, pk):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_INVENTORY)
 def stock_movement_create(request):
     if request.user.role not in ['owner', 'admin', 'manager', 'staff']:
         messages.error(request, 'You are not authorized to take inventory.')

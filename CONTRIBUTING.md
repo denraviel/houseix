@@ -1,0 +1,56 @@
+# Contributing to hmoo
+
+## Branch Strategy
+- `main`: deployable production branch
+- `develop`: integration branch for approved work
+- `feature/*`: isolated feature development
+- `release/*`: release candidate stabilization
+- `hotfix/*`: urgent fixes against production
+
+## Local Setup
+1. Create a virtual environment.
+2. Install development dependencies:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+3. Copy `.env.example` to `.env`.
+4. Run `python manage.py migrate`.
+5. Run `python manage.py test`.
+
+## Coding Standards
+- Preserve the existing service-layer architecture.
+- Keep Django class-based views thin.
+- Put business logic in services, selectors, validators, and mixins where appropriate.
+- Keep templates presentation-only.
+- Maintain backward compatibility.
+- Do not redesign authorization layers without an approved architecture change.
+
+## Required Checks Before Opening a PR
+
+```bash
+black .
+isort .
+flake8 .
+python manage.py check
+python manage.py test
+```
+
+## Commit Guidelines
+- Use small, focused commits.
+- Keep migrations with the code that requires them.
+- Write commit messages in imperative mood.
+
+## Pull Request Expectations
+- Explain the problem and the solution.
+- Mention schema changes, migrations, and verification steps.
+- Include screenshots for UI changes when relevant.
+- Note any follow-up work explicitly.
+
+## Release Flow
+1. Merge feature branches into `develop`.
+2. Cut a `release/*` branch.
+3. Stabilize, test, and document.
+4. Merge into `main`.
+5. Tag the release using semantic versioning.

@@ -1,41 +1,52 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from .models import Sale
-from .forms import SaleForm
-from accounts.views import AdminRequiredMixin, OwnerRequiredMixin
 from django.views.generic import ListView, CreateView, DeleteView
 from django.urls import reverse_lazy
 
+from accounts.permissions import OperationalModuleAccessMixin
+from accounts.views import OwnerRequiredMixin
+from accounts.services import NavigationService
 
-class SaleListView(AdminRequiredMixin, ListView):
+from .forms import SaleForm
+from .models import Sale
+from .services import SalesAccessService
+
+
+class SaleListView(OperationalModuleAccessMixin, ListView):
+    module_code = NavigationService.MODULE_SALES
     model = Sale
     template_name = 'sales/sales_list.html'
     context_object_name = 'sales'
     ordering = ['-created_at']
 
     def get_queryset(self):
-        return Sale.objects.select_related('product', 'recorded_by', 'customer', 'room', 'stay').order_by('-created_at')
+        return SalesAccessService.sales_queryset_for_user(self.request.user)
 
 
-class SaleCreateView(LoginRequiredMixin, CreateView):
+class SaleCreateView(OperationalModuleAccessMixin, LoginRequiredMixin, CreateView):
+    module_code = NavigationService.MODULE_SALES
     model = Sale
     form_class = SaleForm
     template_name = 'sales/sale_form.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
     
     def form_valid(self, form):
         form.instance.recorded_by = self.request.user
+        messages.success(self.request, 'Sale recorded successfully!')
         return super().form_valid(form)
     
     def get_success_url(self):
-        if self.request.user.role in ['owner', 'admin']:
+        if self.request.user.role in ['owner', 'admin', 'manager']:
             return reverse_lazy('sales_list')
-        else:
-            return reverse_lazy('employee_dashboard')
+        return reverse_lazy('employee_dashboard')
 
 
-class SaleDeleteView(OwnerRequiredMixin, DeleteView):
+class SaleDeleteView(OperationalModuleAccessMixin, OwnerRequiredMixin, DeleteView):
+    module_code = NavigationService.MODULE_SALES
     model = Sale
     template_name = 'sales/sale_confirm_delete.html'
     success_url = reverse_lazy('sales_list')
@@ -44,21 +55,3 @@ class SaleDeleteView(OwnerRequiredMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Sale record deleted successfully!')
         return super().delete(request, *args, **kwargs)
-
-
-@login_required
-def sale_create(request):
-    if request.method == 'POST':
-        form = SaleForm(request.POST)
-        if form.is_valid():
-            sale = form.save(commit=False)
-            sale.recorded_by = request.user
-            sale.save()
-            messages.success(request, 'Sale recorded successfully!')
-            if request.user.role in ['owner', 'admin', 'manager']:
-                return redirect('sales_list')
-            else:
-                return redirect('employee_dashboard')
-    else:
-        form = SaleForm()
-    return render(request, 'sales/sale_form.html', {'form': form})

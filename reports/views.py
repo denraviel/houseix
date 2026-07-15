@@ -8,10 +8,13 @@ from sales.models import Sale
 from products.models import Product
 from inventory.models import InventoryItem
 from accounts.models import CustomUser, ActivityLog
+from accounts.permissions import module_permission_required
+from accounts.services import NavigationService
 from expenses.selectors import expense_report_snapshot
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_REPORTS)
 def reports_dashboard(request):
     if request.user.role not in ['owner', 'admin', 'manager']:
         from django.shortcuts import redirect
@@ -33,6 +36,7 @@ def reports_dashboard(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_REPORTS)
 def sales_report(request):
     if request.user.role not in ['owner', 'admin', 'manager']:
         from django.shortcuts import redirect
@@ -118,6 +122,7 @@ def sales_report(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_REPORTS)
 def inventory_report(request):
     if request.user.role not in ['owner', 'admin', 'manager']:
         from django.shortcuts import redirect
@@ -181,6 +186,7 @@ def inventory_report(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_REPORTS)
 def product_performance_report(request):
     if request.user.role not in ['owner', 'admin', 'manager']:
         from django.shortcuts import redirect
@@ -224,6 +230,7 @@ def product_performance_report(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_REPORTS)
 def staff_performance_report(request):
     if request.user.role not in ['owner', 'admin', 'manager']:
         from django.shortcuts import redirect
@@ -243,6 +250,7 @@ def staff_performance_report(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_REPORTS)
 def activity_report(request):
     if request.user.role not in ['owner', 'admin', 'manager']:
         from django.shortcuts import redirect

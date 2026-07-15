@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from products.models import Product
 from customers.models import Customer
 from rooms.models import Room
@@ -26,6 +27,10 @@ class Sale(models.Model):
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        if self.stay_id and self.stay and self.stay.is_closed:
+            raise ValidationError({'stay': 'Sales cannot be recorded for a guest who has already checked out or whose stay is closed.'})
     
     def save(self, *args, **kwargs):
         if self.stay_id:
@@ -34,6 +39,7 @@ class Sale(models.Model):
         if self.product:
             self.unit_price = self.product.selling_price
             self.total_amount = self.quantity * self.unit_price
+        self.full_clean()
         super().save(*args, **kwargs)
     
     def __str__(self):

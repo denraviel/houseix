@@ -1,16 +1,16 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import HttpResponseForbidden
 
+from accounts.services import NavigationService
 from .models import Expense
 
 
 def can_access_expenses(user):
-    return getattr(user, 'is_authenticated', False) and getattr(user, 'role', None) in [
-        'owner',
-        'admin',
-        'manager',
-        'staff',
-    ]
+    return (
+        getattr(user, 'is_authenticated', False)
+        and NavigationService.can_access_module(user, NavigationService.MODULE_EXPENSES)
+        and getattr(user, 'role', None) in ['owner', 'admin', 'manager', 'staff']
+    )
 
 
 def can_manage_reference_data(user):

@@ -8,9 +8,12 @@ from accounts.views import AdminRequiredMixin, OwnerAdminRequiredMixin
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.db.models import Q
+from accounts.permissions import OperationalModuleAccessMixin, module_permission_required
+from accounts.services import NavigationService
 
 
-class ProductListView(AdminRequiredMixin, ListView):
+class ProductListView(OperationalModuleAccessMixin, AdminRequiredMixin, ListView):
+    module_code = NavigationService.MODULE_PRODUCTS
     model = Product
     template_name = 'products/product_list_v2.html'
     context_object_name = 'products'
@@ -32,7 +35,8 @@ class ProductListView(AdminRequiredMixin, ListView):
         return context
 
 
-class ProductCreateView(AdminRequiredMixin, CreateView):
+class ProductCreateView(OperationalModuleAccessMixin, AdminRequiredMixin, CreateView):
+    module_code = NavigationService.MODULE_PRODUCTS
     model = Product
     form_class = ProductForm
     template_name = 'products/product_form.html'
@@ -46,7 +50,8 @@ class ProductCreateView(AdminRequiredMixin, CreateView):
         return response
 
 
-class ProductUpdateView(AdminRequiredMixin, UpdateView):
+class ProductUpdateView(OperationalModuleAccessMixin, AdminRequiredMixin, UpdateView):
+    module_code = NavigationService.MODULE_PRODUCTS
     model = Product
     form_class = ProductForm
     template_name = 'products/product_form.html'
@@ -61,6 +66,7 @@ class ProductUpdateView(AdminRequiredMixin, UpdateView):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_PRODUCTS)
 def product_toggle_active(request, pk):
     if request.user.role not in ['owner', 'admin', 'manager']:
         messages.error(request, 'You are not authorized to perform this action.')
@@ -73,7 +79,8 @@ def product_toggle_active(request, pk):
     return redirect('product_list')
 
 
-class ProductDeleteView(OwnerAdminRequiredMixin, DeleteView):
+class ProductDeleteView(OperationalModuleAccessMixin, OwnerAdminRequiredMixin, DeleteView):
+    module_code = NavigationService.MODULE_PRODUCTS
     model = Product
     template_name = 'products/product_confirm_delete.html'
     success_url = reverse_lazy('product_list')

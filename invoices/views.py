@@ -7,6 +7,8 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import DetailView, FormView, ListView
 
+from accounts.permissions import OperationalModuleAccessMixin
+from accounts.services import NavigationService
 from stays.models import GuestStay
 
 from .forms import InvoiceCreateForm, InvoiceFilterForm, InvoicePaymentForm, InvoiceUpdateForm
@@ -15,7 +17,8 @@ from .permissions import InvoiceAccessMixin, InvoiceManagerRequiredMixin, can_re
 from .services import InvoiceCalculationService, InvoiceGeneratorService, InvoicePDFService, InvoicePaymentService
 
 
-class InvoiceListView(ListView):
+class InvoiceListView(OperationalModuleAccessMixin, ListView):
+    module_code = NavigationService.MODULE_INVOICES
     model = Invoice
     template_name = 'invoices/invoice_list.html'
     context_object_name = 'invoices'
@@ -68,6 +71,12 @@ class InvoiceDetailView(InvoiceAccessMixin, DetailView):
         context = super().get_context_data(**kwargs)
         calculations = InvoiceCalculationService(self.object)
         context.update(calculations.build_context())
+        context['charge_mode_text'] = (
+            "Provisional balance based on today's date because the stay is still active."
+            if context.get('is_provisional')
+            else 'Final balance based on recorded checkout date.'
+        )
+        context['room_label'] = f'Room {context["room"].room_number} ({context["room"].get_room_type_display()})'
         context['ownership_details'] = {
             'created_by': self.object.created_by.full_name if self.object.created_by else '-',
             'updated_by': self.object.updated_by.full_name if self.object.updated_by else '-',
@@ -263,7 +272,8 @@ class InvoicePDFView(InvoiceAccessMixin, DetailView):
         return InvoicePDFService.render(self.object)
 
 
-class InvoiceHistoryView(ListView):
+class InvoiceHistoryView(OperationalModuleAccessMixin, ListView):
+    module_code = NavigationService.MODULE_INVOICES
     model = InvoiceAuditLog
     template_name = 'invoices/invoice_history.html'
     context_object_name = 'history_entries'

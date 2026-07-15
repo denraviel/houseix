@@ -1,0 +1,13 @@
+services:
+  web:
+    build:
+      context: .
+    environment:
+      DJANGO_ENV: development
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app

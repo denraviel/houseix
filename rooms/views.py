@@ -5,6 +5,8 @@ from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 
+from accounts.permissions import module_permission_required
+from accounts.services import NavigationService
 from .forms import RoomForm
 from .models import Room
 
@@ -18,6 +20,7 @@ def _can_delete_rooms(user):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_ROOMS)
 def room_list(request):
     query = (request.GET.get('q') or '').strip()
     rooms = Room.objects.all()
@@ -31,6 +34,7 @@ def room_list(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_ROOMS)
 def room_create(request):
     if not _can_manage_rooms(request.user):
         return HttpResponseForbidden("You don't have permission to access this page.")
@@ -46,6 +50,7 @@ def room_create(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_ROOMS)
 def room_update(request, pk):
     if not _can_manage_rooms(request.user):
         return HttpResponseForbidden("You don't have permission to access this page.")
@@ -62,6 +67,7 @@ def room_update(request, pk):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_ROOMS)
 def room_change_status(request, pk, status):
     if not _can_manage_rooms(request.user):
         return HttpResponseForbidden("You don't have permission to access this page.")
@@ -77,6 +83,7 @@ def room_change_status(request, pk, status):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_ROOMS)
 def room_delete(request, pk):
     if not _can_delete_rooms(request.user):
         return HttpResponseForbidden("You don't have permission to access this page.")

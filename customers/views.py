@@ -6,6 +6,8 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 
 from accounts.models import ActivityLog
+from accounts.permissions import module_permission_required
+from accounts.services import NavigationService
 from .forms import CustomerForm
 from .models import Customer
 
@@ -23,6 +25,7 @@ def _can_delete_customers(user):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_CUSTOMERS)
 def customer_list(request):
     query = (request.GET.get('q') or '').strip()
     customers = Customer.objects.all()
@@ -37,6 +40,7 @@ def customer_list(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_CUSTOMERS)
 def customer_detail(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     stays = customer.stays.select_related('room').all().order_by('-created_at')
@@ -44,6 +48,7 @@ def customer_detail(request, pk):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_CUSTOMERS)
 def customer_create(request):
     if not _can_create_customers(request.user):
         return HttpResponseForbidden("You don't have permission to access this page.")
@@ -67,6 +72,7 @@ def customer_create(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_CUSTOMERS)
 def customer_update(request, pk):
     if not _can_edit_customers(request.user):
         return HttpResponseForbidden("You don't have permission to access this page.")
@@ -84,6 +90,7 @@ def customer_update(request, pk):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_CUSTOMERS)
 def customer_delete(request, pk):
     if not _can_delete_customers(request.user):
         return HttpResponseForbidden("You don't have permission to access this page.")

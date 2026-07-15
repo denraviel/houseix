@@ -1,16 +1,79 @@
-{% extends 'base.html' %} {% load crispy_forms_tags %} {% block title %}{% if
-staff %}Edit{% else %}Add{% endif %} Staff - HouseIX Ops{% endblock %} {% block
-content %}
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Staff - HouseIX Ops{% endblock %}
+
+{% block content %}
 <h2>{% if staff %}Edit Staff{% else %}Add New Staff{% endif %}</h2>
+
 <div class="card">
-  <div class="card-body">
-    <form method="post">
-      {% csrf_token %} {{ form|crispy }}
-      <button type="submit" class="btn btn-primary">
-        {% if staff %}Update{% else %}Create{% endif %}
-      </button>
-      <a href="{% url 'staff_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
-  </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            {{ form.full_name|as_crispy_field }}
+            {{ form.display_name|as_crispy_field }}
+            {{ form.username|as_crispy_field }}
+            {{ form.email|as_crispy_field }}
+            {{ form.phone_number|as_crispy_field }}
+            {{ form.role|as_crispy_field }}
+            {{ form.positions|as_crispy_field }}
+
+            {% if form.module_permissions %}
+            <div class="alert alert-info">
+                Assign feature modules for this user. Dashboard, Profile, and
+                Settings remain available by default.
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">{{ form.module_permissions.label }}</label>
+
+                {% if form.module_permissions.help_text %}
+                <div class="form-text mb-2">{{ form.module_permissions.help_text }}</div>
+                {% endif %}
+
+                {% if form.module_permissions.errors %}
+                <div class="text-danger small mb-2">{{ form.module_permissions.errors }}</div>
+                {% endif %}
+
+                <div class="border rounded p-3">
+                    {% for checkbox in form.module_permissions %}
+                    <div class="form-check mb-2">
+                        {{ checkbox.tag }}
+                        <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                            {{ checkbox.choice_label }}
+                        </label>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted mb-0">No active module permissions are available.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if form.is_active %}
+            {{ form.is_active|as_crispy_field }}
+            {% endif %}
+
+            {% if form.password1 %}
+            {{ form.password1|as_crispy_field }}
+            {% endif %}
+
+            {% if form.password2 %}
+            {{ form.password2|as_crispy_field }}
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary">
+                {% if staff %}Update{% else %}Create{% endif %}
+            </button>
+            <a href="{% url 'staff_list' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
 </div>
 {% endblock %}

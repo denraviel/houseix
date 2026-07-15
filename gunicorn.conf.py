@@ -1,0 +1,9 @@
+bind = f"0.0.0.0:{__import__('os').getenv('PORT', '8000')}"
+workers = int(__import__('os').getenv('GUNICORN_WORKERS', '3'))
+threads = int(__import__('os').getenv('GUNICORN_THREADS', '2'))
+timeout = int(__import__('os').getenv('GUNICORN_TIMEOUT', '60'))
+graceful_timeout = int(__import__('os').getenv('GUNICORN_GRACEFUL_TIMEOUT', '30'))
+keepalive = int(__import__('os').getenv('GUNICORN_KEEPALIVE', '5'))
+accesslog = '-'
+errorlog = '-'
+loglevel = __import__('os').getenv('GUNICORN_LOG_LEVEL', 'info')

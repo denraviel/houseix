@@ -28,6 +28,15 @@
         padding-bottom: 12px;
       }
       .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .brand-logo {
+        max-width: 220px;
+        height: auto;
+      }
+      .brand-name {
         font-size: 26px;
         font-weight: bold;
       }
@@ -76,8 +85,14 @@
   <body>
     <div class="page">
       <div class="header">
-        <div>
-          <div class="brand">HouseIX Ops</div>
+        {% load static %}
+        <div class="brand">
+          <img
+            src="{% static 'invoices/houseix-logo.svg' %}"
+            alt="House IX logo"
+            class="brand-logo"
+          />
+          <div class="brand-name">HouseIX Ops</div>
           <div class="muted">Hotel Invoice</div>
         </div>
         <div class="no-print">

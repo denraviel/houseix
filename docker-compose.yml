@@ -1,0 +1,36 @@
+services:
+  web:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      DJANGO_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-hmoo}:${POSTGRES_PASSWORD:-hmoo}@db:5432/${POSTGRES_DB:-hmoo}}
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --config gunicorn.conf.py"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    volumes:
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hmoo}
+      POSTGRES_USER: ${POSTGRES_USER:-hmoo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hmoo}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+  static_data:
+  media_data:

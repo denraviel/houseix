@@ -1,9 +1,14 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden
 
+from accounts.services import NavigationService
+
 
 def can_manage_maintenance_module(user):
-    return getattr(user, 'role', None) in ['owner', 'admin', 'manager', 'staff']
+    return (
+        getattr(user, 'role', None) in ['owner', 'admin', 'manager', 'staff']
+        and NavigationService.can_access_module(user, NavigationService.MODULE_MAINTENANCE)
+    )
 
 
 def can_create_maintenance_issue(user):

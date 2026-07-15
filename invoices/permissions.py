@@ -1,13 +1,21 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import HttpResponseForbidden
 
+from accounts.services import NavigationService
+
 
 def can_manage_invoices(user):
-    return getattr(user, 'is_authenticated', False) and user.role in ['owner', 'admin', 'manager']
+    return (
+        getattr(user, 'is_authenticated', False)
+        and NavigationService.can_access_module(user, NavigationService.MODULE_INVOICES)
+        and user.role in ['owner', 'admin', 'manager']
+    )
 
 
 def can_view_invoice(user, invoice):
     if not getattr(user, 'is_authenticated', False):
+        return False
+    if not NavigationService.can_access_module(user, NavigationService.MODULE_INVOICES):
         return False
     if user.role in ['owner', 'admin', 'manager']:
         return True
@@ -16,6 +24,8 @@ def can_view_invoice(user, invoice):
 
 def can_record_payments(user, invoice):
     if not getattr(user, 'is_authenticated', False):
+        return False
+    if not NavigationService.can_access_module(user, NavigationService.MODULE_INVOICES):
         return False
     if user.role in ['owner', 'admin', 'manager']:
         return True

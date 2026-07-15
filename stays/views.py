@@ -6,6 +6,8 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 
 from accounts.models import ActivityLog
+from accounts.permissions import module_permission_required
+from accounts.services import NavigationService
 from .forms import GuestStayForm
 from .models import GuestStay
 
@@ -19,6 +21,7 @@ def _can_edit_stays(user):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_STAYS)
 def stay_list(request):
     query = (request.GET.get('q') or '').strip()
     stays = GuestStay.objects.select_related('customer', 'room').all()
@@ -33,12 +36,14 @@ def stay_list(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_STAYS)
 def stay_detail(request, pk):
     stay = get_object_or_404(GuestStay.objects.select_related('customer', 'room'), pk=pk)
     return render(request, 'stays/stay_detail.html', {'stay': stay})
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_STAYS)
 def stay_create(request):
     if not _can_create_stays(request.user):
         return HttpResponseForbidden("You don't have permission to access this page.")
@@ -99,6 +104,7 @@ def stay_create(request):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_STAYS)
 def stay_update(request, pk):
     if not _can_edit_stays(request.user):
         return HttpResponseForbidden("You don't have permission to access this page.")
@@ -160,6 +166,7 @@ def stay_update(request, pk):
 
 
 @login_required
+@module_permission_required(NavigationService.MODULE_STAYS)
 def stay_status_update(request, pk):
     if request.method != 'POST':
         return HttpResponseForbidden("Invalid request.")

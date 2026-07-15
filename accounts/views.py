@@ -6,7 +6,9 @@ from django.contrib import messages
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, FormView, TemplateView
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.deletion import ProtectedError
 from django.db.utils import OperationalError
 from .forms import (
     AdminResetPasswordForm,
@@ -77,8 +79,8 @@ class StaffListView(OperationalModuleAccessMixin, AdminRequiredMixin, ListView):
 
     def get_queryset(self):
         if self.request.user.role == 'manager':
-            return CustomUser.objects.filter(role='staff').prefetch_related('positions').order_by('-date_joined')
-        return CustomUser.objects.all().prefetch_related('positions').order_by('-date_joined')
+            return CustomUser.objects.filter(role='staff').prefetch_related('positions', 'module_permissions').order_by('-date_joined')
+        return CustomUser.objects.all().prefetch_related('positions', 'module_permissions').order_by('-date_joined')
 
 
 class StaffCreateView(OperationalModuleAccessMixin, AdminRequiredMixin, CreateView):
@@ -90,6 +92,7 @@ class StaffCreateView(OperationalModuleAccessMixin, AdminRequiredMixin, CreateVi
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
+        kwargs['can_assign_module_permissions'] = self.request.user.role in ['owner', 'admin']
         if self.request.user.role == 'owner':
             kwargs['allowed_roles'] = ['owner', 'admin', 'manager', 'staff']
         elif self.request.user.role == 'admin':
@@ -149,6 +152,7 @@ class StaffUpdateView(OperationalModuleAccessMixin, AdminRequiredMixin, UpdateVi
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
+        kwargs['can_assign_module_permissions'] = self.request.user.role in ['owner', 'admin']
         if self.request.user.role == 'owner':
             kwargs['allowed_roles'] = ['owner', 'admin', 'manager', 'staff']
         elif self.request.user.role == 'admin':
@@ -164,8 +168,9 @@ class StaffDeleteView(OperationalModuleAccessMixin, AdminRequiredMixin, DeleteVi
     success_url = reverse_lazy('staff_list')
     context_object_name = 'staff'
 
-    def delete(self, request, *args, **kwargs):
-        staff = self.get_object()
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        staff = self.object
         if request.user.role not in ['owner', 'admin']:
             messages.error(request, 'Only owner/admin can delete user accounts.')
             return redirect('staff_list')
@@ -175,10 +180,22 @@ class StaffDeleteView(OperationalModuleAccessMixin, AdminRequiredMixin, DeleteVi
         if staff.role == 'admin' and request.user.role != 'owner':
             messages.error(request, 'Only the owner can delete admin accounts.')
             return redirect('staff_list')
-        messages.success(request, 'Staff account deleted successfully!')
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        staff = self.object
+        try:
+            response = super().form_valid(form)
+        except ProtectedError:
+            messages.error(
+                self.request,
+                'This user cannot be deleted because they are referenced by operational records. Deactivate the account instead to preserve audit history.',
+            )
+            return redirect('staff_list')
+        messages.success(self.request, 'Staff account deleted successfully!')
         from .models import AuditLog
-        AuditLog.log(request.user, 'user_edited', f"Deleted user {staff.email} ({staff.role})")
-        return super().delete(request, *args, **kwargs)
+        AuditLog.log(self.request.user, 'user_edited', f"Deleted user {staff.email} ({staff.role})")
+        return response
 
 
 @login_required
@@ -436,7 +453,11 @@ class FirstLoginSetupView(LoginRequiredMixin, FormView):
         }
 
     def form_valid(self, form):
-        AccountOnboardingService.complete_first_login(user=self.request.user, cleaned_data=form.cleaned_data)
+        try:
+            AccountOnboardingService.complete_first_login(user=self.request.user, cleaned_data=form.cleaned_data)
+        except ValidationError as error:
+            form.add_error('new_password1', error)
+            return self.form_invalid(form)
         update_session_auth_hash(self.request, self.request.user)
         messages.success(self.request, 'Account setup completed successfully.')
         return redirect(AccountOnboardingService.get_post_login_redirect_url(self.request.user))

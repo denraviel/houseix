@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
 from django.db.models import Avg, Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -795,7 +796,8 @@ class MaintenanceIssueUpdateView(MaintenanceIssueAccessMixin, FormView):
     form_class = MaintenanceIssueForm
 
     def dispatch(self, request, *args, **kwargs):
-        if not can_edit_maintenance_issue(request.user, self.issue):
+        issue = self.load_issue(request, **kwargs)
+        if not can_edit_maintenance_issue(request.user, issue):
             return HttpResponseForbidden("You don't have permission to edit this maintenance issue.")
         return super().dispatch(request, *args, **kwargs)
 

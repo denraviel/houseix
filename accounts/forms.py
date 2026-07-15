@@ -1,9 +1,10 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm
+from django.core.exceptions import ValidationError
 
-from .models import JobPosition
-from .services import AccountProfileService
+from .models import JobPosition, ModulePermission
+from .services import AccountProfileService, AccountSecurityService
 
 
 CustomUser = get_user_model()
@@ -13,7 +14,9 @@ class BootstrapFormMixin:
     def _apply_bootstrap(self):
         for field in self.fields.values():
             widget = field.widget
-            if isinstance(widget, forms.CheckboxInput):
+            if isinstance(widget, forms.CheckboxSelectMultiple):
+                widget.attrs['class'] = 'list-unstyled mb-0'
+            elif isinstance(widget, forms.CheckboxInput):
                 widget.attrs['class'] = 'form-check-input'
             elif isinstance(widget, (forms.Select, forms.SelectMultiple)):
                 widget.attrs['class'] = 'form-select'
@@ -38,10 +41,11 @@ class CustomLoginForm(BootstrapFormMixin, AuthenticationForm):
 class StaffForm(BootstrapFormMixin, UserCreationForm):
     class Meta:
         model = CustomUser
-        fields = ['full_name', 'display_name', 'username', 'email', 'phone_number', 'role', 'positions']
+        fields = ['full_name', 'display_name', 'username', 'email', 'phone_number', 'role', 'positions', 'module_permissions']
 
     def __init__(self, *args, **kwargs):
         allowed_roles = kwargs.pop('allowed_roles', ['owner', 'admin', 'manager', 'staff'])
+        can_assign_module_permissions = kwargs.pop('can_assign_module_permissions', False)
         super().__init__(*args, **kwargs)
         self.fields['role'].choices = [choice for choice in self.fields['role'].choices if choice[0] in allowed_roles]
         self.fields['positions'].queryset = JobPosition.objects.filter(is_active=True).order_by('department', 'name')
@@ -52,6 +56,14 @@ class StaffForm(BootstrapFormMixin, UserCreationForm):
         self.fields['email'].help_text = 'Temporary or personal email address.'
         self.fields['password1'].label = 'Temporary Password'
         self.fields['password2'].label = 'Confirm Temporary Password'
+        if can_assign_module_permissions:
+            self.fields['module_permissions'].queryset = ModulePermission.objects.filter(is_active=True).order_by('display_order', 'name')
+            self.fields['module_permissions'].required = False
+            self.fields['module_permissions'].widget = forms.CheckboxSelectMultiple()
+            self.fields['module_permissions'].widget.choices = self.fields['module_permissions'].choices
+            self.fields['module_permissions'].help_text = 'Assign feature modules for this user. Dashboard, Profile, and Settings remain available by default.'
+        else:
+            self.fields.pop('module_permissions', None)
         self._apply_bootstrap()
 
     def clean_username(self):
@@ -64,15 +76,33 @@ class StaffForm(BootstrapFormMixin, UserCreationForm):
 class StaffUpdateForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ['full_name', 'display_name', 'username', 'email', 'phone_number', 'role', 'positions', 'is_active']
+        fields = ['full_name', 'display_name', 'username', 'email', 'phone_number', 'role', 'positions', 'module_permissions', 'is_active']
 
     def __init__(self, *args, **kwargs):
         allowed_roles = kwargs.pop('allowed_roles', ['owner', 'admin', 'manager', 'staff'])
+        can_assign_module_permissions = kwargs.pop('can_assign_module_permissions', False)
         super().__init__(*args, **kwargs)
         self.fields['role'].choices = [choice for choice in self.fields['role'].choices if choice[0] in allowed_roles]
         self.fields['positions'].queryset = JobPosition.objects.filter(is_active=True).order_by('department', 'name')
         self.fields['positions'].required = False
         self.fields['username'].required = True
+        if can_assign_module_permissions:
+            self.fields['module_permissions'].queryset = ModulePermission.objects.filter(is_active=True).order_by('display_order', 'name')
+            self.fields['module_permissions'].required = False
+            self.fields['module_permissions'].widget = forms.CheckboxSelectMultiple()
+            self.fields['module_permissions'].widget.choices = self.fields['module_permissions'].choices
+            self.fields['module_permissions'].help_text = 'Assign feature modules for this user. Dashboard, Profile, and Settings remain available by default.'
+            if (
+                getattr(self.instance, 'pk', None)
+                and self.instance.role == 'admin'
+                and not self.instance.module_permissions_configured
+            ):
+                self.initial.setdefault(
+                    'module_permissions',
+                    list(ModulePermission.objects.filter(is_active=True).values_list('pk', flat=True)),
+                )
+        else:
+            self.fields.pop('module_permissions', None)
         self._apply_bootstrap()
 
     def clean_username(self):
@@ -106,6 +136,20 @@ class FirstLoginSetupForm(BootstrapFormMixin, forms.Form):
         cleaned_data = super().clean()
         if cleaned_data.get('new_password1') != cleaned_data.get('new_password2'):
             self.add_error('new_password2', 'Password confirmation does not match.')
+        new_password = cleaned_data.get('new_password1')
+        if new_password and not self.errors.get('new_password1') and self.user:
+            validation_user = self.user.__class__(
+                pk=self.user.pk,
+                email=cleaned_data.get('email') or self.user.email,
+                username=cleaned_data.get('username') or self.user.username,
+                full_name=self.user.full_name,
+                phone_number=self.user.phone_number,
+                role=self.user.role,
+            )
+            try:
+                AccountSecurityService.validate_password(password=new_password, user=validation_user)
+            except ValidationError as error:
+                self.add_error('new_password1', error)
         return cleaned_data
 
 
