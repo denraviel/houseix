@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load crispy_forms_tags %}
 {% block title %}{% if object %}Edit{% else %}Record{% endif %} Sale - House IX Ops{% endblock %}
 {% block content %}
 <h2>{% if object %}Edit{% else %}Record{% endif %} Sale</h2>
@@ -6,27 +7,9 @@
     <div class="card-body">
         <form method="post">
             {% csrf_token %}
-            {% for field in form %}
-                {% if field.field.widget.input_type == 'checkbox' %}
-                    <div class="form-check mb-3">
-                        {{ field }}
-                        <label for="{{ field.id_for_label }}" class="form-check-label">{{ field.label }}</label>
-                    </div>
-                {% else %}
-                    <div class="mb-3">
-                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                {% endif %}
-                    {% if field.help_text %}
-                        <small class="form-text text-muted">{{ field.help_text }}</small>
-                    {% endif %}
-                    {% for error in field.errors %}
-                        <div class="text-danger">{{ error }}</div>
-                    {% endfor %}
-                </div>
-            {% endfor %}
+            {{ form|crispy }}
             <button type="submit" class="btn btn-primary">{% if object %}Update{% else %}Record{% endif %}</button>
-            <a href="{% if request.user.role == 'owner' or request.user.role == 'admin' or request.user.role == 'manager' %}{% url 'sales_list' %}{% else %}{% url 'employee_dashboard' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+            <a href="{% if request.user.role in 'owneradmin' %}{% url 'sales_list' %}{% else %}{% url 'employee_dashboard' %}{% endif %}" class="btn btn-secondary">Cancel</a>
         </form>
     </div>
 </div>

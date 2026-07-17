@@ -3,57 +3,18 @@
 from django.db import migrations, models
 
 
-def migrate_task_positions_and_seed_integrations(apps, schema_editor):
-    Task = apps.get_model('tasks', 'Task')
-    JobPosition = apps.get_model('accounts', 'JobPosition')
-    InspectionTemplate = apps.get_model('tasks', 'InspectionTemplate')
-    MaintenanceCategory = apps.get_model('tasks', 'MaintenanceCategory')
-
-    task_through = Task.required_positions.through
-    for task in Task.objects.exclude(required_position__isnull=True).only('id', 'required_position_id'):
-        task_through.objects.get_or_create(task_id=task.id, jobposition_id=task.required_position_id)
-
-    cleaner_positions = JobPosition.objects.filter(code__in=['cleaner', 'housekeeping_supervisor'])
-    maintenance_positions = JobPosition.objects.filter(code__in=['maintenance_technician', 'maintenance_supervisor'])
-    security_positions = JobPosition.objects.filter(code__in=['security_officer', 'security_supervisor'])
-
-    cleaner_template = InspectionTemplate.objects.filter(name='Cleaner Room Inspection').first()
-    if cleaner_template:
-        cleaner_template.applicable_positions.set(cleaner_positions)
-
-    maintenance_category_names = [
-        'Electrical',
-        'Plumbing',
-        'Painting',
-        'Air Conditioning',
-        'Furniture',
-        'Generator',
-        'Television',
-        'Internet',
-        'DSTV',
-        'Door Locks',
-        'Bathroom',
-        'Roof',
-        'Windows',
-        'Kitchen Equipment',
-        'Laundry Equipment',
-        'General',
-    ]
-    for category in MaintenanceCategory.objects.filter(name__in=maintenance_category_names):
-        category.assignable_positions.set(maintenance_positions)
-
-    for category in MaintenanceCategory.objects.filter(name='Security'):
-        category.assignable_positions.set(security_positions)
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0008_sync_default_job_positions_multi_position_support'),
+        ('accounts', '0007_remove_customuser_position_customuser_positions'),
         ('tasks', '0010_task_required_position'),
     ]
 
     operations = [
+        migrations.RemoveField(
+            model_name='task',
+            name='required_position',
+        ),
         migrations.AddField(
             model_name='inspectiontemplate',
             name='applicable_positions',
@@ -68,10 +29,5 @@ class Migration(migrations.Migration):
             model_name='task',
             name='required_positions',
             field=models.ManyToManyField(blank=True, limit_choices_to={'is_active': True}, related_name='required_tasks', to='accounts.jobposition'),
-        ),
-        migrations.RunPython(migrate_task_positions_and_seed_integrations, migrations.RunPython.noop),
-        migrations.RemoveField(
-            model_name='task',
-            name='required_position',
         ),
     ]

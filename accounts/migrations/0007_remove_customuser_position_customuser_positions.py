@@ -3,13 +3,6 @@
 from django.db import migrations, models
 
 
-def copy_single_position_to_many_to_many(apps, schema_editor):
-    CustomUser = apps.get_model('accounts', 'CustomUser')
-    through_model = CustomUser.positions.through
-    for user in CustomUser.objects.exclude(position__isnull=True).only('id', 'position_id'):
-        through_model.objects.get_or_create(customuser_id=user.id, jobposition_id=user.position_id)
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -17,14 +10,13 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RemoveField(
+            model_name='customuser',
+            name='position',
+        ),
         migrations.AddField(
             model_name='customuser',
             name='positions',
             field=models.ManyToManyField(blank=True, related_name='users', to='accounts.jobposition'),
-        ),
-        migrations.RunPython(copy_single_position_to_many_to_many, migrations.RunPython.noop),
-        migrations.RemoveField(
-            model_name='customuser',
-            name='position',
         ),
     ]

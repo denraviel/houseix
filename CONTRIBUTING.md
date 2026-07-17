@@ -53,13 +53,7 @@ python manage.py test
 - Include screenshots for UI changes when relevant.
 - Note any follow-up work explicitly.
 
-## Release Flow
-
-1. Merge feature branches into `develop`.
-2. Cut a `release/*` branch.
-3. Stabilize, test, and document.
-4. Merge into `main`.
-5. Tag the release from `main` using semantic versioning.
+5. Tag the release using semantic versioning.
 6. Merge any release-only fixes back into `develop`.
 
 ## Default Branch Usage

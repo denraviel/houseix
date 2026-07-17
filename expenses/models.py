@@ -1,3 +1,6 @@
+from django.db import models
+
+# Create your models here.
 from decimal import Decimal
 from pathlib import Path
 
