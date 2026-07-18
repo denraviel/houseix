@@ -15,11 +15,19 @@ def ensure_date_assigned_column(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    from django.db import migrations
+
+
+class Migration(migrations.Migration):
+
     dependencies = [
-        ('tasks', '0001_initial'),
+        ("tasks", "0001_initial"),
     ]
 
     operations = [
-        migrations.RunPython(ensure_date_assigned_column, migrations.RunPython.noop),
+        migrations.RunPython(
+            migrations.RunPython.noop,
+            migrations.RunPython.noop,
+        ),
     ]
 
