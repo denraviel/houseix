@@ -4,7 +4,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F403,F401
 
-DEBUG = False
+DEBUG = env_flag("DJANGO_DEBUG", False)
 SECRET_KEY = env('DJANGO_SECRET_KEY', required=True)
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', [])
 CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS', [])
