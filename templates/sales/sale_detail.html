@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% block title %}Sale #{{ sale.pk }} - House IX Ops{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>Sale Details</h2>
+        <p class="text-muted mb-0">Sale #{{ sale.pk }} recorded on {{ sale.created_at|date:"Y-m-d H:i" }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'sales_list' %}" class="btn btn-outline-secondary">Back to Sales</a>
+        {% if can_generate_invoice %}
+            {% if has_invoice %}
+            <a href="{% url 'invoice_detail' linked_invoice.pk %}" class="btn btn-primary">
+                <i class="bi bi-file-text"></i> View Sales Invoice ({{ linked_invoice.invoice_number }})
+            </a>
+            {% else %}
+            <form method="post" action="{% url 'sale_generate_invoice' sale.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-receipt"></i> Generate Sales Invoice
+                </button>
+            </form>
+            {% endif %}
+        {% endif %}
+        {% if can_manage and user.role == 'owner' %}
+        <a href="{% url 'sale_delete' sale.pk %}" class="btn btn-outline-danger">Delete</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if has_invoice %}
+<div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <div>
+        This sale has been invoiced.
+        <a href="{% url 'invoice_detail' linked_invoice.pk %}" class="alert-link">Open invoice {{ linked_invoice.invoice_number }}</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header"><strong>Sale Information</strong></div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-4 text-muted">Sale ID</div>
+                    <div class="col-md-8">#{{ sale.pk }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4 text-muted">Sale Date &amp; Time</div>
+                    <div class="col-md-8">{{ sale.created_at|date:"Y-m-d H:i:s" }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4 text-muted">Recorded By</div>
+                    <div class="col-md-8">
+                        {{ sale.recorded_by.full_name }}
+                        <span class="text-muted">({{ sale.recorded_by.role|default:"-" }})</span>
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4 text-muted">Customer</div>
+                    <div class="col-md-8">
+                        {% if sale.customer %}
+                        <a href="{% url 'customer_detail' sale.customer.pk %}">{{ sale.customer.full_name }}</a>
+                        <span class="text-muted">({{ sale.customer.customer_id|default:"-" }})</span>
+                        {% else %}
+                        <span class="text-muted">Walk-in / General Customer</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4 text-muted">Guest Stay</div>
+                    <div class="col-md-8">
+                        {% if sale.stay %}
+                        <a href="{% url 'stay_detail' sale.stay.pk %}">Stay #{{ sale.stay.pk }}</a>
+                        <span class="text-muted">- Room {{ sale.stay.room.room_number }}</span>
+                        {% else %}
+                        <span class="text-muted">Not linked to a stay</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4 text-muted">Room</div>
+                    <div class="col-md-8">
+                        {% if sale.room %}
+                        Room {{ sale.room.room_number }} ({{ sale.room.get_room_type_display }})
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-0">
+                    <div class="col-md-4 text-muted">Payment Method</div>
+                    <div class="col-md-8">
+                        <span class="badge bg-secondary">{{ sale.get_payment_method_display }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><strong>Item Details</strong></div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ sale.product.name }}</td>
+                                <td>{{ sale.product.get_category_display }}</td>
+                                <td>{{ sale.quantity }}</td>
+                                <td>₦{{ sale.unit_price|floatformat:2 }}</td>
+                                <td><strong>₦{{ sale.total_amount|floatformat:2 }}</strong></td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="text-end"><strong>Total Amount:</strong></td>
+                                <td><strong>₦{{ sale.total_amount|floatformat:2 }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header"><strong>Sale Summary</strong></div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Quantity</span>
+                    <strong>{{ sale.quantity }} {{ sale.product.unit_type }}{{ sale.quantity|pluralize }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Unit Price</span>
+                    <strong>₦{{ sale.unit_price|floatformat:2 }}</strong>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between">
+                    <span>Total</span>
+                    <strong class="text-primary" style="font-size: 1.25rem;">₦{{ sale.total_amount|floatformat:2 }}</strong>
+                </div>
+            </div>
+        </div>
+
+        {% if can_generate_invoice %}
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary text-white"><strong>Invoice Actions</strong></div>
+            <div class="card-body">
+                {% if has_invoice %}
+                <p class="mb-3">
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    Invoice has been generated for this sale.
+                </p>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'invoice_detail' linked_invoice.pk %}" class="btn btn-primary">
+                        <i class="bi bi-file-text"></i> View Invoice
+                    </a>
+                    <a href="{% url 'invoice_print' linked_invoice.pk %}" class="btn btn-outline-dark">
+                        <i class="bi bi-printer"></i> Print Invoice
+                    </a>
+                    <a href="{% url 'invoice_pdf' linked_invoice.pk %}" class="btn btn-outline-success">
+                        <i class="bi bi-file-earmark-pdf"></i> Download PDF
+                    </a>
+                </div>
+                {% else %}
+                <p class="mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                    No invoice has been generated for this sale yet.
+                </p>
+                <form method="post" action="{% url 'sale_generate_invoice' sale.pk %}">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-receipt"></i> Generate Sales Invoice
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header"><strong>Product Info</strong></div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <span class="text-muted">Name:</span>
+                    <span>{{ sale.product.name }}</span>
+                </div>
+                <div class="mb-2">
+                    <span class="text-muted">Category:</span>
+                    <span>{{ sale.product.get_category_display }}</span>
+                </div>
+                <div class="mb-0">
+                    <span class="text-muted">Cost Price:</span>
+                    <span>₦{{ sale.product.cost_price|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

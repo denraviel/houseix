@@ -6,68 +6,68 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h2 class="mb-0">Inspection History</h2>
-        <div class="text-muted">Review all submitted inspections for reporting and quality control.</div>
+        <div class="text-muted">View completed and locked inspections.</div>
     </div>
-    <a href="{% url 'inspection_list' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
-</div>
-
-<div class="card mb-3">
-    <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label" for="{{ filter_form.template.id_for_label }}">Template</label>
-                {{ filter_form.template }}
-            </div>
-            <div class="col-md-2">
-                <label class="form-label" for="{{ filter_form.result.id_for_label }}">Result</label>
-                {{ filter_form.result }}
-            </div>
-            <div class="col-md-3">
-                <label class="form-label" for="{{ filter_form.worker.id_for_label }}">Worker</label>
-                {{ filter_form.worker }}
-            </div>
-            <div class="col-md-2">
-                <label class="form-label" for="{{ filter_form.search.id_for_label }}">Task Search</label>
-                {{ filter_form.search }}
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">Apply</button>
-            </div>
-        </form>
+    <div class="d-flex gap-2">
+        <a href="{% url 'inspection_list' %}" class="btn btn-outline-secondary">Inspection Dashboard</a>
+        <a href="{% url 'task_list' %}" class="btn btn-outline-secondary">Back to Tasks</a>
     </div>
 </div>
 
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-striped align-middle">
+            <table class="table table-striped table-hover">
                 <thead>
                     <tr>
-                        <th>Submitted At</th>
+                        <th>ID</th>
                         <th>Task</th>
-                        <th>Worker</th>
                         <th>Template</th>
-                        <th>Score</th>
+                        <th>Inspector</th>
+                        <th>Worker</th>
                         <th>Result</th>
+                        <th>Score</th>
+                        <th>Inspection Date</th>
+                        <th>Submission</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for inspection in inspections %}
                     <tr>
-                        <td>{% if inspection.submitted_at %}{{ inspection.submitted_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
-                        <td>{{ inspection.task.title }}</td>
+                        <td>{{ inspection.pk }}</td>
+                        <td>
+                            <div class="fw-semibold">{{ inspection.task.title }}</div>
+                            <div class="small text-muted">{% if inspection.task.room %}Room {{ inspection.task.room.room_number }}{% endif %}</div>
+                        </td>
+                        <td>{% if inspection.template %}{{ inspection.template.name }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                        <td>{{ inspection.inspector.full_name }}</td>
                         <td>{{ inspection.worker.full_name }}</td>
-                        <td>{{ inspection.template.name }}</td>
-                        <td>{{ inspection.final_score }}</td>
-                        <td>{{ inspection.get_result_display }}</td>
-                        <td class="text-end">
-                            <a href="{% url 'inspection_detail' inspection.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
+                        <td>
+                            {% if inspection.result == 'passed' %}
+                            <span class="badge bg-success">Passed</span>
+                            {% elif inspection.result == 'failed' %}
+                            <span class="badge bg-danger">Failed</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-semibold">{{ inspection.pass_count }}/{{ inspection.total_count }}</td>
+                        <td>{{ inspection.inspection_date|date:"M d, Y" }}</td>
+                        <td>
+                            {% if inspection.is_submitted %}
+                            <span class="badge bg-dark">Submitted (Locked)</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Draft</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'inspection_detail' inspection.pk %}" class="btn btn-sm btn-outline-primary">View</a>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-muted">No submitted inspections found.</td>
+                        <td colspan="10" class="text-center text-muted py-4">No submitted inspections found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

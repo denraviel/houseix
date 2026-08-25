@@ -1,27 +1,51 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
 
 {% block title %}Assign Maintenance Issue - HouseIX Ops{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h2 class="mb-1">Assign Maintenance Issue</h2>
-    <div class="text-muted">{{ issue.issue_number }} - {{ issue.title }}</div>
-  </div>
-  <a href="{% url 'maintenance_issue_detail' issue.pk %}" class="btn btn-outline-secondary">Back to Issue</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Assign Issue · {{ issue.issue_number }}</h2>
+    <a href="{% url 'maintenance_issue_detail' issue.pk %}" class="btn btn-outline-secondary">Back to Issue</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><strong>Issue Summary</strong></div>
+    <div class="card-body">
+        <div class="mb-1"><span class="text-muted">Issue:</span> <span class="fw-semibold">{{ issue.title }}</span></div>
+        <div class="mb-1"><span class="text-muted">Category:</span> {{ issue.category.name }}</div>
+        <div class="mb-1"><span class="text-muted">Room:</span> {% if issue.room %}{{ issue.room.room_number }}{% else %}-{% endif %}</div>
+        <div class="mb-0"><span class="text-muted">Current Status:</span> {% include 'tasks/maintenance/partials/status_badge.html' with issue=issue %}</div>
+    </div>
 </div>
 
 <div class="card">
-  <div class="card-body">
-    <form method="post">
-      {% csrf_token %}
-      {{ form|crispy }}
-      <div class="d-flex gap-2 mt-3">
-        <button type="submit" class="btn btn-primary">Save Assignment</button>
-        <a href="{% url 'maintenance_issue_detail' issue.pk %}" class="btn btn-outline-secondary">Cancel</a>
-      </div>
-    </form>
-  </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Save Assignment</button>
+                <a href="{% url 'maintenance_issue_detail' issue.pk %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

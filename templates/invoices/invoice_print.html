@@ -43,6 +43,16 @@
       .muted {
         color: #6b7280;
       }
+      .invoice-type-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+        color: #fff;
+      }
+      .type-stay { background: #0ea5e9; }
+      .type-sale { background: #6b7280; }
       .meta-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -93,10 +103,16 @@
             class="brand-logo"
           />
           <div class="brand-name">HouseIX Ops</div>
-          <div class="muted">Hotel Invoice</div>
+          <div class="muted">
+            {% if is_guest_stay_invoice %}
+              Hotel Invoice
+            {% else %}
+              Sales Invoice
+            {% endif %}
+          </div>
         </div>
         <div class="no-print">
-          <button onclick="window.print()">Print</button>
+          <button onclick="window.print()" style="padding:8px 16px;">Print</button>
         </div>
       </div>
 
@@ -105,17 +121,30 @@
           <strong>Invoice Information</strong><br />
           Invoice Number: {{ invoice.invoice_number }}<br />
           Invoice Date: {{ invoice.invoice_date }}<br />
-          Status: {{ invoice.get_status_display }}
+          Status: {{ invoice.get_status_display }}<br />
+          Type:
+          <span class="invoice-type-badge {% if is_guest_stay_invoice %}type-stay{% else %}type-sale{% endif %}">
+            {{ invoice.get_invoice_type_display }}
+          </span>
         </div>
         <div class="box">
-          <strong>Guest Information</strong><br />
-          Guest: {{ customer.full_name }}<br />
-          Customer ID: {{ customer.customer_id|default:"-" }}<br />
-          Phone: {{ customer.phone_number }}<br />
-          Room: {{ room.room_number }} ({{ room.get_room_type_display }})
+          <strong>Customer Information</strong><br />
+          {% if customer %}
+            Customer: {{ customer.full_name }}<br />
+            Customer ID: {{ customer.customer_id|default:"-" }}<br />
+            Phone: {{ customer.phone_number|default:"-" }}
+          {% else %}
+            Customer: Walk-in Customer<br />
+            Customer ID: -<br />
+            Phone: -
+          {% endif %}
+          {% if is_guest_stay_invoice and room %}
+            <br />Room: {{ room.room_number }} ({{ room.get_room_type_display }})
+          {% endif %}
         </div>
       </div>
 
+      {% if is_guest_stay_invoice %}
       <div class="box" style="margin-bottom: 24px">
         <strong>Stay Summary</strong><br />
         Check In: {{ stay.check_in_date }}<br />
@@ -125,7 +154,16 @@
         checkout date because the stay is still active. {% else %} This invoice
         uses the recorded checkout date. {% endif %}
       </div>
+      {% else %}
+      <div class="box" style="margin-bottom: 24px">
+        <strong>Sale Information</strong><br />
+        Sale Date: {% if sale_created_at %}{{ sale_created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}<br />
+        Sale Payment Method: {{ sale_payment_method|default:"-" }}<br />
+        Recorded By: {% if sale_recorded_by %}{{ sale_recorded_by.full_name }}{% else %}-{% endif %}
+      </div>
+      {% endif %}
 
+      {% if is_guest_stay_invoice %}
       <h3>Room Charges</h3>
       <table>
         <thead>
@@ -149,8 +187,11 @@
           {% endfor %}
         </tbody>
       </table>
+      {% endif %}
 
-      <h3>Product Charges</h3>
+      <h3>
+        {% if is_guest_stay_invoice %}Product Charges{% else %}Invoice Items{% endif %}
+      </h3>
       <table>
         <thead>
           <tr>
@@ -170,7 +211,13 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="4">No product sales linked to this stay.</td>
+            <td colspan="4">
+              {% if is_guest_stay_invoice %}
+                No product sales linked to this stay.
+              {% else %}
+                No items on this sales invoice.
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -210,10 +257,12 @@
             <th>Label</th>
             <th>Amount</th>
           </tr>
+          {% if is_guest_stay_invoice %}
           <tr>
             <td>Room Total</td>
             <td>N{{ room_charge_total|floatformat:2 }}</td>
           </tr>
+          {% endif %}
           <tr>
             <td>Product Total</td>
             <td>N{{ product_charge_total|floatformat:2 }}</td>

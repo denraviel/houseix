@@ -4,7 +4,15 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h2 class="mb-1">Record Payment</h2>
-    <p class="text-muted mb-0">{{ invoice.invoice_number }} for {{ customer.full_name }} in Room {{ room.room_number }}</p>
+    <p class="text-muted mb-0">
+      {{ invoice.invoice_number }}
+      {% if is_guest_stay_invoice %}
+        for {{ customer.full_name }} in Room {{ room.room_number }}
+      {% else %}
+        Standalone Sales Invoice
+        {% if customer %} for {{ customer.full_name }}{% endif %}
+      {% endif %}
+    </p>
   </div>
   <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-outline-secondary">Back to Invoice</a>
 </div>
@@ -44,6 +52,7 @@
     <div class="card">
       <div class="card-header"><strong>Current Balances</strong></div>
       <div class="card-body">
+        {% if is_guest_stay_invoice %}
         <div class="d-flex justify-content-between mb-2">
           <span>Room Charges</span>
           <strong>N{{ room_charge_total|floatformat:2 }}</strong>
@@ -56,8 +65,9 @@
           <span>Room Balance</span>
           <strong>N{{ room_balance|floatformat:2 }}</strong>
         </div>
+        {% endif %}
         <div class="d-flex justify-content-between mb-2">
-          <span>Product Charges</span>
+          <span>{% if is_guest_stay_invoice %}Product Charges{% else %}Invoice Items Total{% endif %}</span>
           <strong>N{{ product_charge_total|floatformat:2 }}</strong>
         </div>
         <div class="d-flex justify-content-between mb-2">

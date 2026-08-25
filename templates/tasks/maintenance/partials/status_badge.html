@@ -1,1 +1,21 @@
-<span class="badge bg-{{ issue.status_badge_class }}">{{ issue.get_status_display }}</span>
+{% if issue.status == 'open' %}
+<span class="badge bg-secondary">Open</span>
+{% elif issue.status == 'acknowledged' %}
+<span class="badge bg-info text-dark">Acknowledged</span>
+{% elif issue.status == 'assigned' %}
+<span class="badge bg-primary">Assigned</span>
+{% elif issue.status == 'in_progress' %}
+<span class="badge bg-warning text-dark">In Progress</span>
+{% elif issue.status == 'waiting_parts' %}
+<span class="badge bg-light text-dark border">Waiting Parts</span>
+{% elif issue.status == 'waiting_vendor' %}
+<span class="badge bg-light text-dark border">Waiting Vendor</span>
+{% elif issue.status == 'completed' %}
+<span class="badge bg-success">Completed</span>
+{% elif issue.status == 'reopened' %}
+<span class="badge bg-danger">Reopened</span>
+{% elif issue.status == 'verified' %}
+<span class="badge bg-dark">Verified</span>
+{% else %}
+<span class="badge bg-secondary">{{ issue.get_status_display|default:"-" }}</span>
+{% endif %}

@@ -16,7 +16,7 @@ from django.views.generic import CreateView, DetailView, FormView, ListView, Tem
 
 from accounts.models import AuditLog, CustomUser
 from expenses.models import ExpenseCategory
-
+from accounts.services import NavigationService
 from .forms import (
     InspectionCreateForm,
     InspectionFilterForm,
@@ -102,7 +102,7 @@ def task_create(request):
     if request.user.role not in ['owner', 'admin', 'manager']:
         return HttpResponseForbidden("You don't have permission to access this page.")
     if request.method == 'POST':
-        form = TaskForm(request.POST)
+        form = TaskForm(request.POST, actor=request.user)
         if form.is_valid():
             task = form.save(commit=False)
             task.created_by = request.user
@@ -114,7 +114,7 @@ def task_create(request):
             messages.success(request, 'Task created successfully.')
             return redirect('task_list')
     else:
-        form = TaskForm()
+        form = TaskForm(actor=request.user)
     return render(request, 'tasks/task_form.html', {'form': form})
 
 
@@ -124,7 +124,7 @@ def task_update(request, pk):
         return HttpResponseForbidden("You don't have permission to access this page.")
     task = get_object_or_404(Task, pk=pk)
     if request.method == 'POST':
-        form = TaskForm(request.POST, instance=task)
+        form = TaskForm(request.POST, instance=task, actor=request.user)
         if form.is_valid():
             updated_task = form.save(commit=False)
             if updated_task.status in [Task.STATUS_COMPLETED, Task.STATUS_READY_FOR_REVIEW] and updated_task.completed_at is None:
@@ -135,7 +135,7 @@ def task_update(request, pk):
             messages.success(request, 'Task updated successfully.')
             return redirect('task_list')
     else:
-        form = TaskForm(instance=task)
+        form = TaskForm(instance=task, actor=request.user)
     return render(request, 'tasks/task_form.html', {'form': form, 'task': task})
 
 
@@ -154,20 +154,48 @@ def task_delete(request, pk):
 
 @login_required
 def my_tasks(request):
-    if request.user.role != 'staff':
-        return HttpResponseForbidden("You don't have permission to access this page.")
-    base_queryset = Task.objects.select_related('room').prefetch_related('required_positions').filter(assigned_to=request.user)
-    pending_tasks = base_queryset.filter(status=Task.STATUS_PENDING)
-    in_progress_tasks = base_queryset.filter(status=Task.STATUS_IN_PROGRESS)
-    ready_for_review_tasks = base_queryset.filter(status=Task.STATUS_READY_FOR_REVIEW)
-    completed_tasks = base_queryset.filter(status=Task.STATUS_COMPLETED)
+    """
+    Display tasks assigned to the currently logged-in user.
+
+    Access is controlled by the central module permission system.
+    Any user who has access to the My Tasks module can use this page.
+    """
+
+    if not NavigationService.can_access_module(
+        request.user,
+        NavigationService.MODULE_MY_TASKS
+    ):
+        return HttpResponseForbidden(
+            "You don't have permission to access this page."
+        )
+
+    base_queryset = (
+        Task.objects
+        .select_related('room', 'assigned_to', 'created_by')
+        .prefetch_related('required_positions')
+        .filter(assigned_to=request.user)
+    )
+
     context = {
-        'pending_tasks': pending_tasks,
-        'in_progress_tasks': in_progress_tasks,
-        'ready_for_review_tasks': ready_for_review_tasks,
-        'completed_tasks': completed_tasks,
+        'pending_tasks': base_queryset.filter(
+            status=Task.STATUS_PENDING
+        ),
+        'in_progress_tasks': base_queryset.filter(
+            status=Task.STATUS_IN_PROGRESS
+        ),
+        'ready_for_review_tasks': base_queryset.filter(
+            status=Task.STATUS_READY_FOR_REVIEW
+        ),
+        'completed_tasks': base_queryset.filter(
+            status=Task.STATUS_COMPLETED
+        ),
     }
-    return render(request, 'tasks/my_tasks.html', context)
+
+    return render(
+        request,
+        'tasks/my_tasks.html',
+        context
+    )
 
 
 @login_required
@@ -179,53 +207,122 @@ def my_performance(request):
 
 @login_required
 def staff_task_start(request, pk):
-    if request.user.role != 'staff':
-        return HttpResponseForbidden("You don't have permission to access this page.")
+    """
+    Allow an assigned employee/manager to start their own task.
+    """
+    if request.user.role not in ['owner', 'admin', 'manager', 'staff']:
+        return HttpResponseForbidden(
+            "You don't have permission to access this page."
+        )
+
     if request.method != 'POST':
         return HttpResponseForbidden("Invalid request.")
-    task = get_object_or_404(Task, pk=pk, assigned_to=request.user)
+
+    task = get_object_or_404(
+        Task,
+        pk=pk,
+        assigned_to=request.user
+    )
+
     if task.status == Task.STATUS_PENDING:
         task.status = Task.STATUS_IN_PROGRESS
         task.save(update_fields=['status'])
+
     return redirect('my_tasks')
 
 
 @login_required
 def staff_task_complete(request, pk):
-    if request.user.role != 'staff':
-        return HttpResponseForbidden("You don't have permission to access this page.")
+    """
+    Allow an assigned employee/manager to complete their own task.
+    """
+    if request.user.role not in ['owner', 'admin', 'manager', 'staff']:
+        return HttpResponseForbidden(
+            "You don't have permission to access this page."
+        )
+
     if request.method != 'POST':
         return HttpResponseForbidden("Invalid request.")
-    task = get_object_or_404(Task, pk=pk, assigned_to=request.user)
-    target_status = Task.STATUS_READY_FOR_REVIEW if task.requires_inspection else Task.STATUS_COMPLETED
+
+    task = get_object_or_404(
+        Task,
+        pk=pk,
+        assigned_to=request.user
+    )
+
+    target_status = (
+        Task.STATUS_READY_FOR_REVIEW
+        if task.requires_inspection
+        else Task.STATUS_COMPLETED
+    )
+
     if task.status != target_status:
         task.status = target_status
         task.completed_at = timezone.now()
-        task.save(update_fields=['status', 'completed_at'])
-    if target_status == Task.STATUS_READY_FOR_REVIEW:
-        messages.success(request, 'Task marked Ready for Review. A manager can now audit it.')
-    else:
-        messages.success(request, 'Task marked completed.')
+        task.save(
+            update_fields=['status', 'completed_at']
+        )
+
     return redirect('staff_task_update', pk=task.pk)
 
 
 @login_required
 def staff_task_update(request, pk):
-    if request.user.role != 'staff':
-        return HttpResponseForbidden("You don't have permission to access this page.")
-    task = get_object_or_404(Task, pk=pk, assigned_to=request.user)
+    """
+    Allow an assigned employee/manager to update their own task.
+    """
+    if request.user.role not in ['owner', 'admin', 'manager', 'staff']:
+        return HttpResponseForbidden(
+            "You don't have permission to access this page."
+        )
+
+    task = get_object_or_404(
+        Task,
+        pk=pk,
+        assigned_to=request.user
+    )
+
     if request.method == 'POST':
-        form = StaffTaskUpdateForm(request.POST, instance=task)
+        form = StaffTaskUpdateForm(
+            request.POST,
+            instance=task
+        )
+
         if form.is_valid():
             updated_task = form.save(commit=False)
-            if updated_task.status in [Task.STATUS_COMPLETED, Task.STATUS_READY_FOR_REVIEW] and task.status != updated_task.status:
+
+            if (
+                updated_task.status
+                in [
+                    Task.STATUS_COMPLETED,
+                    Task.STATUS_READY_FOR_REVIEW
+                ]
+                and task.status != updated_task.status
+            ):
                 updated_task.completed_at = timezone.now()
+
             updated_task.save()
-            messages.success(request, 'Task update saved.')
+
+            messages.success(
+                request,
+                'Task update saved.'
+            )
+
             return redirect('my_tasks')
+
     else:
-        form = StaffTaskUpdateForm(instance=task)
-    return render(request, 'tasks/staff_task_form.html', {'form': form, 'task': task})
+        form = StaffTaskUpdateForm(
+            instance=task
+        )
+
+    return render(
+        request,
+        'tasks/staff_task_form.html',
+        {
+            'form': form,
+            'task': task
+        }
+    )
 
 
 @login_required
@@ -804,6 +901,7 @@ class MaintenanceIssueUpdateView(MaintenanceIssueAccessMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['instance'] = self.issue
+        kwargs['actor'] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -839,6 +937,7 @@ class MaintenanceIssueAssignView(MaintenanceAdminAccessMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['instance'] = self.issue
+        kwargs['actor'] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):

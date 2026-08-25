@@ -4,12 +4,12 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h2 class="mb-1">Invoices</h2>
-    <p class="text-muted mb-0">Room charges come from guest stays and product charges come from sales linked to each stay.</p>
+    <p class="text-muted mb-0">Guest Stay invoices (linked to stays) and Standalone Sales invoices.</p>
   </div>
   {% if can_manage %}
   <div class="d-flex gap-2">
     <a href="{% url 'invoice_history' %}" class="btn btn-outline-secondary">History</a>
-    <a href="{% url 'invoice_create' %}" class="btn btn-primary">Generate Invoice</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-primary">Generate Stay Invoice</a>
   </div>
   {% endif %}
 </div>
@@ -40,7 +40,8 @@
         <thead>
           <tr>
             <th>Invoice</th>
-            <th>Guest</th>
+            <th>Type</th>
+            <th>Customer</th>
             <th>Room</th>
             <th>Invoice Date</th>
             <th>Status</th>
@@ -54,25 +55,62 @@
           {% for invoice in invoices %}
           <tr>
             <td>
-              <a href="{% url 'invoice_detail' invoice.pk %}">{{ invoice.invoice_number }}</a>
+              <a href="{% url 'invoice_detail' invoice.pk %}" class="fw-semibold">{{ invoice.invoice_number }}</a>
             </td>
-            <td>{{ invoice.stay.customer.full_name }}</td>
-            <td>Room {{ invoice.stay.room.room_number }}</td>
+            <td>
+              {% if invoice.is_guest_stay_invoice %}
+                <span class="badge bg-info text-dark">Guest Stay</span>
+              {% else %}
+                <span class="badge bg-secondary">Sales</span>
+              {% endif %}
+            </td>
+            <td>
+              {% with customer=invoice.display_customer %}
+                {% if customer %}
+                  {{ customer.full_name }}
+                {% else %}
+                  <span class="text-muted">Walk-in</span>
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td>
+              {% if invoice.room %}
+                Room {{ invoice.room.room_number }}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
             <td>{{ invoice.invoice_date|date:"Y-m-d" }}</td>
             <td>
               <span class="badge bg-{{ invoice.status_badge_class }}">{{ invoice.get_status_display }}</span>
             </td>
             <td>N{{ invoice.grand_total|floatformat:2 }}</td>
-            <td>N{{ invoice.balance|floatformat:2 }}</td>
+            <td>
+              <span class="{% if invoice.balance == 0 and invoice.grand_total > 0 %}text-success{% else %}text-danger{% endif %} fw-semibold">
+                N{{ invoice.balance|floatformat:2 }}
+              </span>
+            </td>
             <td>{{ invoice.assigned_to.full_name|default:"-" }}</td>
             <td class="text-nowrap">
-              <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-              <a href="{% url 'invoice_print' invoice.pk %}" class="btn btn-sm btn-outline-secondary">Print</a>
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-outline-primary" title="View">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{% url 'invoice_print' invoice.pk %}" class="btn btn-outline-secondary" title="Print A4">
+                  <i class="bi bi-printer"></i>
+                </a>
+                <a href="{% url 'invoice_thermal_print' invoice.pk %}" class="btn btn-outline-dark" title="Print 58mm">
+                  <i class="bi bi-receipt"></i>
+                </a>
+              </div>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="9" class="text-center py-4">No invoices found.</td>
+            <td colspan="10" class="text-center py-4 text-muted">
+              <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+              No invoices found.
+            </td>
           </tr>
           {% endfor %}
         </tbody>

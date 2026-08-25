@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{ invoice.invoice_number }} - 58mm Thermal Receipt</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 11px;
+        line-height: 1.4;
+        color: #000;
+        width: 58mm;
+        max-width: 58mm;
+        padding: 4mm 3mm;
+        margin: 0 auto;
+        background: #fff;
+      }
+      .receipt {
+        width: 100%;
+      }
+      .center {
+        text-align: center;
+      }
+      .bold {
+        font-weight: bold;
+      }
+      .divider {
+        border-top: 1px dashed #000;
+        margin: 6px 0;
+      }
+      .divider-thick {
+        border-top: 2px solid #000;
+        margin: 6px 0;
+      }
+      .brand {
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 2px;
+      }
+      .tagline {
+        font-size: 10px;
+        text-align: center;
+        margin-bottom: 8px;
+        color: #333;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        width: 100%;
+      }
+      .row .label {
+        flex: 0 0 auto;
+        padding-right: 6px;
+      }
+      .row .value {
+        flex: 1 1 auto;
+        text-align: right;
+        word-break: break-word;
+      }
+      .invoice-type {
+        font-size: 10px;
+        text-align: center;
+        padding: 2px 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      table.items {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        margin: 4px 0;
+      }
+      table.items th,
+      table.items td {
+        padding: 2px 0;
+        vertical-align: top;
+      }
+      table.items th {
+        font-weight: bold;
+        text-align: left;
+      }
+      table.items .col-item {
+        width: 52%;
+      }
+      table.items .col-qty {
+        width: 10%;
+        text-align: center;
+      }
+      table.items .col-price {
+        width: 18%;
+        text-align: right;
+      }
+      table.items .col-total {
+        width: 20%;
+        text-align: right;
+      }
+      table.totals {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+      table.totals td {
+        padding: 2px 0;
+      }
+      table.totals td:first-child {
+        text-align: left;
+      }
+      table.totals td:last-child {
+        text-align: right;
+      }
+      table.totals .grand-total {
+        font-size: 13px;
+        font-weight: bold;
+        border-top: 1px dashed #000;
+        padding-top: 6px;
+      }
+      .thanks {
+        text-align: center;
+        margin-top: 10px;
+        font-weight: bold;
+      }
+      .footer {
+        text-align: center;
+        font-size: 9px;
+        color: #555;
+        margin-top: 6px;
+      }
+      @media print {
+        body {
+          width: 58mm;
+          max-width: 58mm;
+          padding: 0;
+          margin: 0;
+        }
+        .no-print {
+          display: none !important;
+        }
+        @page {
+          size: 58mm auto;
+          margin: 0;
+        }
+      }
+      .print-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: #111;
+        color: #fff;
+        padding: 8px 16px;
+        text-align: center;
+        z-index: 9999;
+      }
+      .print-bar button {
+        padding: 6px 14px;
+        background: #22c55e;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .print-bar .spacer {
+        height: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="no-print print-bar">
+      <button onclick="window.print()">PRINT RECEIPT (58mm)</button>
+    </div>
+    <div class="no-print spacer"></div>
+
+    <div class="receipt">
+      <div class="brand">HOUSE IX OPS</div>
+      <div class="tagline">
+        {% if is_guest_stay_invoice %}
+          HOTEL INVOICE
+        {% else %}
+          SALES INVOICE
+        {% endif %}
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="row">
+        <span class="label">Inv#:</span>
+        <span class="value bold">{{ invoice.invoice_number }}</span>
+      </div>
+      <div class="row">
+        <span class="label">Date:</span>
+        <span class="value">{{ invoice.invoice_date }}</span>
+      </div>
+      <div class="row">
+        <span class="label">Status:</span>
+        <span class="value">{{ invoice.get_status_display }}</span>
+      </div>
+
+      <div class="divider"></div>
+
+      {% if customer %}
+      <div class="row">
+        <span class="label">Customer:</span>
+        <span class="value">{{ customer.full_name }}</span>
+      </div>
+      {% if customer.customer_id %}
+      <div class="row">
+        <span class="label">Cust ID:</span>
+        <span class="value">{{ customer.customer_id }}</span>
+      </div>
+      {% endif %}
+      {% if customer.phone_number %}
+      <div class="row">
+        <span class="label">Phone:</span>
+        <span class="value">{{ customer.phone_number }}</span>
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="center" style="font-size:10px; color:#555;">Walk-in Customer</div>
+      {% endif %}
+
+      {% if is_guest_stay_invoice and room %}
+      <div class="row">
+        <span class="label">Room:</span>
+        <span class="value">{{ room.room_number }} ({{ room.get_room_type_display }})</span>
+      </div>
+      <div class="row">
+        <span class="label">In:</span>
+        <span class="value">{{ stay.check_in_date }}</span>
+      </div>
+      <div class="row">
+        <span class="label">Out:</span>
+        <span class="value">{{ charge_end_date }}</span>
+      </div>
+      <div class="row">
+        <span class="label">Days:</span>
+        <span class="value">{{ billable_days }}</span>
+      </div>
+      {% else %}
+        {% if sale_created_at %}
+        <div class="row">
+          <span class="label">Sale:</span>
+          <span class="value">{{ sale_created_at|date:"Y-m-d H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if sale_payment_method %}
+        <div class="row">
+          <span class="label">Sale PM:</span>
+          <span class="value">{{ sale_payment_method }}</span>
+        </div>
+        {% endif %}
+      {% endif %}
+
+      <div class="divider-thick"></div>
+
+      {% if is_guest_stay_invoice and room_charge_total > 0 %}
+      <div class="bold" style="margin:4px 0 2px 0;">ROOM</div>
+      {% for row in room_charge_rows %}
+      <div class="row">
+        <span class="label" style="width:100%;">
+          Room {{ room.room_number }} x {{ row.days }}d
+        </span>
+      </div>
+      <div class="row">
+        <span class="label">N{{ row.daily_rate|floatformat:2 }} x {{ row.days }}</span>
+        <span class="value">N{{ row.total|floatformat:2 }}</span>
+      </div>
+      {% endfor %}
+      <div class="divider"></div>
+      {% endif %}
+
+      <div class="bold" style="margin:4px 0 2px 0;">ITEMS</div>
+      <table class="items">
+        <thead>
+          <tr>
+            <th class="col-item">Item</th>
+            <th class="col-qty">Q</th>
+            <th class="col-price">Price</th>
+            <th class="col-total">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sale in product_sales %}
+          <tr>
+            <td class="col-item">{{ sale.product.name }}</td>
+            <td class="col-qty">{{ sale.quantity }}</td>
+            <td class="col-price">{{ sale.unit_price|floatformat:0 }}</td>
+            <td class="col-total">{{ sale.total_amount|floatformat:0 }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="center" style="font-size:10px;">No items</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="divider-thick"></div>
+
+      <table class="totals">
+        {% if is_guest_stay_invoice %}
+        <tr>
+          <td>Room Total</td>
+          <td>N{{ room_charge_total|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td>Items Total</td>
+          <td>N{{ product_charge_total|floatformat:2 }}</td>
+        </tr>
+        <tr class="grand-total">
+          <td>GRAND TOTAL</td>
+          <td>N{{ grand_total|floatformat:2 }}</td>
+        </tr>
+      </table>
+
+      {% if payments %}
+      <div class="divider"></div>
+      <div class="bold" style="margin:4px 0;">PAYMENTS</div>
+      {% for payment in payments %}
+      <div class="row">
+        <span class="label">
+          {{ payment.get_payment_type_display|slice:":3" }} / {{ payment.get_payment_method_display|slice:":6" }}
+        </span>
+        <span class="value">N{{ payment.amount|floatformat:2 }}</span>
+      </div>
+      {% endfor %}
+      <div class="divider"></div>
+      <table class="totals">
+        <tr>
+          <td>Paid</td>
+          <td>N{{ total_payments|floatformat:2 }}</td>
+        </tr>
+        <tr class="grand-total">
+          <td>
+            {% if balance == 0 %}PAID{% else %}BALANCE{% endif %}
+          </td>
+          <td>N{{ balance|floatformat:2 }}</td>
+        </tr>
+      </table>
+      {% else %}
+      <div class="divider"></div>
+      <table class="totals">
+        <tr class="grand-total">
+          <td>BALANCE</td>
+          <td>N{{ balance|floatformat:2 }}</td>
+        </tr>
+      </table>
+      {% endif %}
+
+      <div class="thanks">{% if balance == 0 %}THANK YOU - PAID{% else %}THANK YOU{% endif %}</div>
+      <div class="footer">
+        Generated by HouseIX Ops<br />
+        {{ invoice.created_at|date:"Y-m-d H:i" }}
+      </div>
+    </div>
+  </body>
+</html>

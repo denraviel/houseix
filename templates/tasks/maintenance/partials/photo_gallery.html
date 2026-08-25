@@ -1,19 +1,19 @@
-<div class="row g-3">
-  {% for photo in photos %}
-  <div class="col-md-6">
-    <div class="card h-100">
-      <img src="{{ photo.image.url }}" class="card-img-top" alt="{{ photo.caption|default:'Maintenance photo' }}" style="object-fit: cover; max-height: 220px;" />
-      <div class="card-body">
-        <div class="fw-semibold">{{ photo.caption|default:"Maintenance Photo" }}</div>
-        <div class="small text-muted">
-          {% if photo.issue %}{{ photo.issue.issue_number }} - {% endif %}
-          {% if photo.uploaded_by %}{{ photo.uploaded_by.full_name }}{% else %}System{% endif %} -
-          {{ photo.uploaded_at|date:"Y-m-d H:i" }}
+{% if photos %}
+<div class="row g-2">
+    {% for photo in photos %}
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="card h-100">
+            <a href="{{ photo.photo.url }}" target="_blank" rel="noopener">
+                <img src="{{ photo.photo.url }}" class="card-img-top img-fluid" alt="{{ photo.caption|default:'maintenance photo' }}" style="height: 140px; object-fit: cover;">
+            </a>
+            <div class="card-body p-2">
+                <div class="small fw-semibold">{{ photo.caption|default:"Photo" }}</div>
+                <div class="text-muted small">{{ photo.uploaded_by.full_name|default:"-" }} · {{ photo.uploaded_at|date:"M d" }}</div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
-  {% empty %}
-  <div class="col-12 text-muted">No photos uploaded yet.</div>
-  {% endfor %}
+    {% endfor %}
 </div>
+{% else %}
+<div class="text-center text-muted py-4">No photos uploaded yet for this record.</div>
+{% endif %}

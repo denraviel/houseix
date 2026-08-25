@@ -1,56 +1,50 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}Performance Rating - HouseIX Ops{% endblock %}
+{% block title %}Rate Staff Performance - HouseIX Ops{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="mb-0">Performance Rating</h2>
-  <a href="{% url 'task_list' %}" class="btn btn-outline-secondary">Back to Tasks</a>
+    <h2 class="mb-0">Rate Staff Performance</h2>
+    <a href="{% if task %}{% url 'task_list' %}{% else %}{% url 'performance_reports' %}{% endif %}" class="btn btn-outline-secondary">Back</a>
 </div>
 
+{% if task %}
 <div class="card mb-3">
-  <div class="card-body">
-    <div class="row">
-      <div class="col-md-8">
-        <div class="fw-semibold">{{ task.title }}</div>
-        <div class="text-muted">{{ task.get_task_type_display }}</div>
-        {% if task.description %}
-        <div class="mt-2">{{ task.description }}</div>
-        {% endif %}
-      </div>
-      <div class="col-md-4">
-        <div class="text-muted small">Staff Member</div>
-        <div class="fw-semibold">{{ task.assigned_to.full_name }}</div>
-        <div class="text-muted small mt-2">Completed At</div>
-        <div class="fw-semibold">{% if task.completed_at %}{{ task.completed_at|date:"M d, Y H:i" }}{% else %}-{% endif %}</div>
-      </div>
+    <div class="card-header"><strong>Task Summary</strong></div>
+    <div class="card-body">
+        <div class="mb-1"><span class="text-muted">Task:</span> {{ task.title }}</div>
+        <div class="mb-1"><span class="text-muted">Staff:</span> {{ task.assigned_to.full_name }}</div>
+        <div class="mb-1"><span class="text-muted">Type:</span> {{ task.get_task_type_display }}</div>
+        <div class="mb-0"><span class="text-muted">Completed:</span> {% if task.completed_at %}{{ task.completed_at|date:"M d, Y H:i" }}{% else %}-{% endif %}</div>
     </div>
-  </div>
 </div>
+{% endif %}
 
 <div class="card">
-  <div class="card-body">
-    <form method="post">
-      {% csrf_token %}
-
-      <div class="mb-3">
-        <label class="form-label" for="{{ rating_form.rating.id_for_label }}">Rating</label>
-        {{ rating_form.rating }}
-        {% for error in rating_form.rating.errors %}
-        <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label" for="{{ rating_form.comment.id_for_label }}">Comment</label>
-        {{ rating_form.comment }}
-        {% for error in rating_form.comment.errors %}
-        <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
-
-      <button type="submit" class="btn btn-success">Submit Rating</button>
-    </form>
-  </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Submit Rating</button>
+        </form>
+    </div>
 </div>
 {% endblock %}

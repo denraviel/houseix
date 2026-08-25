@@ -1,142 +1,135 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %}
+
+{% block title %}Staff Performance Detail - HouseIX Ops{% endblock %}
+
+{% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="mb-0">{{ staff.full_name }}</h2>
-  <div class="d-flex gap-2">
-    {% if user.role == 'owner' or user.role == 'admin' %}
-    <a
-      href="{% url 'performance_dashboard' %}"
-      class="btn btn-outline-secondary"
-      >Back to Dashboard</a
-    >
-    {% else %}
-    <a href="{% url 'employee_dashboard' %}" class="btn btn-outline-secondary"
-      >Back to Dashboard</a
-    >
-    {% endif %}
-  </div>
+    <h2 class="mb-0">{{ staff.full_name }} - Performance Detail</h2>
+    <a href="{% url 'performance_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
 </div>
 
-<div class="row">
-  <div class="col-md-3">
-    <div class="card text-center mb-3">
-      <div class="card-body">
-        <div class="fw-semibold">{{ total_tasks }}</div>
-        <div class="text-muted">Tasks Assigned</div>
-      </div>
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">{{ total_tasks }}</h5>
+                <p class="card-text text-muted">Tasks Assigned</p>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center mb-3">
-      <div class="card-body">
-        <div class="fw-semibold text-success">{{ completed_tasks }}</div>
-        <div class="text-muted">Tasks Completed</div>
-      </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">{{ completed_tasks }}</h5>
+                <p class="card-text text-muted">Tasks Completed</p>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center mb-3">
-      <div class="card-body">
-        <div class="fw-semibold">{{ completion_rate|floatformat:0 }}%</div>
-        <div class="text-muted">Completion Rate</div>
-      </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">{{ completion_rate|floatformat:0 }}%</h5>
+                <p class="card-text text-muted">Completion Rate</p>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center mb-3">
-      <div class="card-body">
-        <div class="fw-semibold">{{ avg_rating|floatformat:1 }}</div>
-        <div class="text-muted">Average Rating</div>
-        <div class="small text-muted">{{ category }}</div>
-      </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ avg_rating|floatformat:1 }}</h5>
+                <p class="card-text text-muted">Average Rating</p>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
-<div class="row">
-  <div class="col-md-4">
-    <div class="card mb-3">
-      <div class="card-header">Rating Breakdown</div>
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
-          <span>Excellent (5)</span
-          ><span class="fw-semibold">{{ rating_count_5 }}</span>
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><strong>Rating History</strong></div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="fw-semibold">Rating Trend (Last 30 days):</span>
+                        {% if trend == 'Up' %}
+                        <span class="badge bg-success ms-2">↑ Improving</span>
+                        {% elif trend == 'Down' %}
+                        <span class="badge bg-danger ms-2">↓ Declining</span>
+                        {% else %}
+                        <span class="badge bg-secondary ms-2">→ Stable</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Rating</th>
+                                <th>Task</th>
+                                <th>Rated By</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rating in ratings %}
+                            <tr>
+                                <td>{{ rating.date_rated|date:"M d, Y" }}</td>
+                                <td>
+                                    {% for i in '12345'|make_list %}
+                                        {% if rating.rating >= forloop.counter %}<span class="text-warning">★</span>{% else %}<span class="text-muted">☆</span>{% endif %}
+                                    {% endfor %}
+                                    <span class="ms-2 fw-semibold">{{ rating.rating }}/5</span>
+                                </td>
+                                <td>{% if rating.task %}{{ rating.task.title }}{% else %}-{% endif %}</td>
+                                <td>{{ rating.rated_by.full_name }}</td>
+                                <td>{% if rating.notes %}{{ rating.notes }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No ratings recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <div class="d-flex justify-content-between">
-          <span>Very Good (4)</span
-          ><span class="fw-semibold">{{ rating_count_4 }}</span>
-        </div>
-        <div class="d-flex justify-content-between">
-          <span>Good (3)</span
-          ><span class="fw-semibold">{{ rating_count_3 }}</span>
-        </div>
-        <div class="d-flex justify-content-between">
-          <span>Fair (2)</span
-          ><span class="fw-semibold">{{ rating_count_2 }}</span>
-        </div>
-        <div class="d-flex justify-content-between">
-          <span>Poor (1)</span
-          ><span class="fw-semibold">{{ rating_count_1 }}</span>
-        </div>
-        <hr />
-        <div class="d-flex justify-content-between">
-          <span>Total Ratings</span
-          ><span class="fw-semibold">{{ total_ratings }}</span>
-        </div>
-      </div>
     </div>
-
-    <div class="card mb-3">
-      <div class="card-header">Performance Trend (Last 60 Days)</div>
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
-          <span>Last 30 Days Avg</span
-          ><span class="fw-semibold">{{ recent_avg|floatformat:1 }}</span>
+    <div class="col-lg-5">
+        <div class="card mb-4">
+            <div class="card-header"><strong>Rating Distribution</strong></div>
+            <div class="card-body">
+                {% for star in '54321' %}
+                {% with s=star|add:0 %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-semibold">{{ s }} Star{% if s != 1 %}s{% endif %}</span>
+                        <span class="badge bg-secondary">{{ rating_counts|default:"0" }}</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        {% if total_ratings > 0 and rating_counts %}
+                            {% with count=0 %}
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: {% widthratio rating_counts.s total_ratings 100 %}%"></div>
+                            {% endwith %}
+                        {% else %}
+                        <div class="progress-bar bg-light" role="progressbar" style="width: 0%"></div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endwith %}
+                {% endfor %}
+            </div>
         </div>
-        <div class="d-flex justify-content-between">
-          <span>Previous 30 Days Avg</span
-          ><span class="fw-semibold">{{ previous_avg|floatformat:1 }}</span>
+        <div class="card">
+            <div class="card-header"><strong>Staff Profile</strong></div>
+            <div class="card-body">
+                <div class="mb-2"><span class="text-muted">Full Name:</span> <span class="fw-semibold">{{ staff.full_name }}</span></div>
+                <div class="mb-2"><span class="text-muted">Role:</span> <span class="fw-semibold">{{ staff.get_role_display }}</span></div>
+                <div class="mb-2"><span class="text-muted">Email:</span> <span class="fw-semibold">{{ staff.email }}</span></div>
+                <div class="mb-0"><span class="text-muted">Positions:</span> <span class="fw-semibold">{% if staff.position_names %}{{ staff.position_names|join:", " }}{% else %}-{% endif %}</span></div>
+            </div>
         </div>
-        <div class="d-flex justify-content-between">
-          <span>Trend</span><span class="fw-semibold">{{ trend }}</span>
-        </div>
-      </div>
     </div>
-  </div>
-
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-header">Latest Ratings</div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-striped table-hover">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Task</th>
-                <th>Task Type</th>
-                <th>Rating</th>
-                <th>Rated By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in ratings|slice:":20" %}
-              <tr>
-                <td>{{ r.date_rated|date:"M d, Y" }}</td>
-                <td>{{ r.task.title }}</td>
-                <td>{{ r.task_type }}</td>
-                <td><span class="badge bg-dark">{{ r.rating }}</span></td>
-                <td>{{ r.rated_by.full_name }}</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="5" class="text-muted">No ratings yet.</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 {% endblock %}

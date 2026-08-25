@@ -12,6 +12,13 @@ from stays.models import GuestStay
 
 
 class Invoice(models.Model):
+    TYPE_GUEST_STAY = 'guest_stay'
+    TYPE_SALE = 'sale'
+    INVOICE_TYPE_CHOICES = [
+        (TYPE_GUEST_STAY, 'Guest Stay'),
+        (TYPE_SALE, 'Sales'),
+    ]
+
     STATUS_DRAFT = 'draft'
     STATUS_UNPAID = 'unpaid'
     STATUS_PARTIALLY_PAID = 'partially_paid'
@@ -24,7 +31,26 @@ class Invoice(models.Model):
         (STATUS_PAID, 'Paid'),
     ]
 
-    stay = models.OneToOneField(GuestStay, on_delete=models.PROTECT, related_name='invoice')
+    invoice_type = models.CharField(
+        max_length=20,
+        choices=INVOICE_TYPE_CHOICES,
+        default=TYPE_GUEST_STAY,
+        db_index=True,
+    )
+    stay = models.OneToOneField(
+        GuestStay,
+        on_delete=models.PROTECT,
+        related_name='invoice',
+        null=True,
+        blank=True,
+    )
+    customer = models.ForeignKey(
+        'customers.Customer',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invoices',
+    )
     invoice_number = models.CharField(max_length=20, unique=True, blank=True, editable=False, db_index=True)
     invoice_date = models.DateField(default=timezone.localdate)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)
@@ -60,10 +86,19 @@ class Invoice(models.Model):
         return self.invoice_number or f"Invoice #{self.pk}"
 
     def clean(self):
-        if not self.stay_id:
-            raise ValidationError({'stay': 'Invoice must be linked to a guest stay.'})
-        if self.stay.status == GuestStay.STATUS_CANCELLED:
-            raise ValidationError({'stay': 'Cancelled stays cannot have invoices.'})
+        if self.invoice_type == self.TYPE_GUEST_STAY:
+            if not self.stay_id:
+                raise ValidationError({'stay': 'Guest-stay invoices must be linked to a guest stay.'})
+            if self.stay.status == GuestStay.STATUS_CANCELLED:
+                raise ValidationError({'stay': 'Cancelled stays cannot have invoices.'})
+            if not self.customer_id:
+                self.customer = self.stay.customer
+        elif self.invoice_type == self.TYPE_SALE:
+            if self.stay_id:
+                raise ValidationError({'stay': 'Standalone sales invoices cannot be linked to a guest stay.'})
+        else:
+            raise ValidationError({'invoice_type': 'Invalid invoice type.'})
+
         if self.assigned_to and self.assigned_to.role != 'staff':
             raise ValidationError({'assigned_to': 'Invoices can only be assigned to staff users.'})
 
@@ -80,12 +115,20 @@ class Invoice(models.Model):
         return reverse('invoice_detail', kwargs={'pk': self.pk})
 
     @property
-    def customer(self):
-        return self.stay.customer
+    def is_sales_invoice(self):
+        return self.invoice_type == self.TYPE_SALE
+
+    @property
+    def is_guest_stay_invoice(self):
+        return self.invoice_type == self.TYPE_GUEST_STAY
+
+    @property
+    def display_customer(self):
+        return self.customer or (self.stay.customer if self.stay_id else None)
 
     @property
     def room(self):
-        return self.stay.room
+        return self.stay.room if self.stay_id else None
 
     @property
     def status_badge_class(self):
@@ -100,73 +143,61 @@ class Invoice(models.Model):
     @property
     def billable_days(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).billable_days()
 
     @property
     def charge_end_date(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).charge_end_date()
 
     @property
     def is_provisional(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).is_provisional()
 
     @property
     def room_charge_total(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).room_charge_total()
 
     @property
     def product_charge_total(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).product_charge_total()
 
     @property
     def grand_total(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).grand_total()
 
     @property
     def room_payments_total(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).room_payments_total()
 
     @property
     def product_payments_total(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).product_payments_total()
 
     @property
     def total_payments(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).total_payments()
 
     @property
     def room_balance(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).room_balance()
 
     @property
     def product_balance(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).product_balance()
 
     @property
     def balance(self):
         from .services import InvoiceCalculationService
-
         return InvoiceCalculationService(self).balance()
 
     @property
@@ -175,8 +206,27 @@ class Invoice(models.Model):
 
     def refresh_status(self, *, user=None, notes=''):
         from .services import InvoiceStatusService
-
         return InvoiceStatusService.refresh(self, user=user, notes=notes)
+
+
+class InvoiceSale(models.Model):
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='sales')
+    sale = models.OneToOneField(Sale, on_delete=models.PROTECT, related_name='invoice_link')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['sale__created_at']
+        constraints = [
+            models.UniqueConstraint(fields=('invoice', 'sale'), name='unique_invoice_sale'),
+        ]
+
+    def clean(self):
+        if self.invoice_id and self.invoice.invoice_type != Invoice.TYPE_SALE:
+            raise ValidationError({'invoice': 'InvoiceSale can only be attached to standalone sales invoices.'})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class InvoicePaymentQuerySet(models.QuerySet):
@@ -234,8 +284,10 @@ class InvoicePayment(models.Model):
     def clean(self):
         if not self.invoice_id:
             raise ValidationError({'invoice': 'Payment must be linked to an invoice.'})
-        if self.invoice.stay.status == GuestStay.STATUS_CANCELLED:
+        if self.invoice.is_guest_stay_invoice and self.invoice.stay.status == GuestStay.STATUS_CANCELLED:
             raise ValidationError({'invoice': 'Payments cannot be recorded against a cancelled stay.'})
+        if self.invoice.is_sales_invoice and self.payment_type != self.TYPE_PRODUCT:
+            raise ValidationError({'payment_type': 'Standalone sales invoices only accept product payments.'})
         if self.amount is None or self.amount <= Decimal('0.00'):
             raise ValidationError({'amount': 'Payment amount must be greater than zero.'})
         if self.is_void and not self.void_reason:

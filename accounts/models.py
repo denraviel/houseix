@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
@@ -103,7 +104,18 @@ class JobPosition(AccountTrackedModel):
     code = models.CharField(max_length=50, unique=True, db_index=True)
     description = models.TextField(blank=True)
     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES, db_index=True)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)    
+    manages_positions = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        blank=True,
+        related_name='managed_by_positions',
+        help_text=(
+            'Positions that a holder of this position is authorized to assign tasks to, '
+            'independent of the reports_to chain. E.g. "Bar Supervisor" can manage_positions '
+            '"Barman" and "Bartender" without needing an org-chart link.'
+        ),
+    )	
 
     class Meta:
         ordering = ['department', 'name']
@@ -157,6 +169,13 @@ class CustomUser(AbstractUser):
         blank=True,
         related_name='users',
     )
+    reports_to = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='direct_reports',
+    )
     module_permissions = models.ManyToManyField(
         ModulePermission,
         blank=True,
@@ -171,11 +190,61 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.display_name or self.full_name or self.email
 
+    ROLE_HIERARCHY = {
+        'owner': 4,
+        'admin': 3,
+        'manager': 2,
+        'staff': 1,
+    }
+
+    def clean(self):
+        super().clean()
+        if self.reports_to_id == self.pk and self.pk:
+            raise ValidationError({'reports_to': 'A user cannot report to themselves.'})
+        if not self.reports_to_id:
+            return
+
+        supervisor = self.reports_to
+        supervisor_rank = self.ROLE_HIERARCHY.get(supervisor.role, 0)
+        user_rank = self.ROLE_HIERARCHY.get(self.role, 0)
+
+        # Managers may supervise other managers. Other same-level relationships are not allowed.
+        if supervisor_rank < user_rank or (
+            supervisor_rank == user_rank and not (
+                supervisor.role == 'manager' and self.role == 'manager'
+            )
+        ):
+            raise ValidationError({
+                'reports_to': 'The supervisor must have equal or higher organizational authority.'
+            })
+
+        # Prevent circular reporting chains.
+        visited = {self.pk} if self.pk else set()
+        current = supervisor
+        while current is not None:
+            if current.pk in visited:
+                raise ValidationError({'reports_to': 'Reporting relationships cannot contain a cycle.'})
+            visited.add(current.pk)
+            current = current.reports_to
+
+    def is_descendant_of(self, supervisor):
+        if not supervisor or not self.pk or not supervisor.pk or self.pk == supervisor.pk:
+            return False
+        current = self.reports_to
+        visited = set()
+        while current is not None and current.pk not in visited:
+            if current.pk == supervisor.pk:
+                return True
+            visited.add(current.pk)
+            current = current.reports_to
+        return False
+
     def save(self, *args, **kwargs):
         if self.email:
             self.email = self.email.strip().lower()
         if self.username:
             self.username = self.username.strip().lower()
+        self.full_clean()
         return super().save(*args, **kwargs)
 
     def _ordered_positions(self):

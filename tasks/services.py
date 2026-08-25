@@ -1,8 +1,7 @@
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
-
-from accounts.models import AuditLog, CustomUser
+from accounts.models import AuditLog, CustomUser, JobPosition
 
 from .models import (
     InspectionResult,
@@ -56,21 +55,110 @@ class InspectionTemplateService:
 
 
 class TaskAssignmentService:
-    @staticmethod
-    def assignment_candidates(required_positions=None):
-        queryset = CustomUser.objects.filter(role='staff', is_active=True).prefetch_related('positions').order_by('full_name')
+    ROLE_HIERARCHY = CustomUser.ROLE_HIERARCHY
+
+    @classmethod
+    def managed_position_ids(cls, actor):
+        """
+        Positions `actor` is authorized to assign tasks to, via the
+        JobPosition.manages_positions authority graph. The result is the
+        transitive closure: if Operations Manager manages Bar Supervisor,
+        and Bar Supervisor manages Barman, Operations Manager also reaches
+        Barman automatically. Authority never flows backwards along an edge,
+        so Barman gains no authority over Bar Supervisor or Operations Manager.
+        """
+        actor_position_ids = set(
+            actor.positions.filter(is_active=True).values_list('pk', flat=True)
+        )
+        if not actor_position_ids:
+            return set()
+
+        reachable = set()
+        frontier = set(actor_position_ids)
+        seen = set(actor_position_ids)
+        # Bounded traversal guards against accidental cycles in admin-configured data.
+        for _ in range(25):
+            if not frontier:
+                break
+            next_ids = set(
+                JobPosition.objects.filter(pk__in=frontier)
+                .values_list('manages_positions__pk', flat=True)
+            )
+            next_ids.discard(None)
+            next_ids -= seen
+            if not next_ids:
+                break
+            reachable |= next_ids
+            seen |= next_ids
+            frontier = next_ids
+        return reachable
+
+    @classmethod
+    def has_position_authority(cls, *, actor, assigned_to):
+        managed_position_ids = cls.managed_position_ids(actor)
+        if not managed_position_ids:
+            return False
+        return assigned_to.positions.filter(pk__in=managed_position_ids, is_active=True).exists()
+
+    @classmethod
+    def can_assign_to(cls, *, actor, assigned_to):
+        if actor is None or assigned_to is None:
+            return False
+        if not getattr(actor, 'is_authenticated', False) or not actor.is_active or not assigned_to.is_active:
+            return False
+        if actor.pk == assigned_to.pk:
+            return False
+        if actor.role in {'owner', 'admin'}:
+            return True
+        if actor.role != 'manager':
+            return False
+        if assigned_to.is_descendant_of(actor):
+            return True
+        return cls.has_position_authority(actor=actor, assigned_to=assigned_to)
+
+    @classmethod
+    def assignment_candidates(cls, *, actor=None, required_positions=None):
+        base_roles = ['admin', 'manager', 'staff'] if actor is not None else ['staff']
+        queryset = CustomUser.objects.filter(
+            is_active=True,
+            role__in=base_roles,
+        ).exclude(pk=getattr(actor, 'pk', None)).prefetch_related('positions').order_by('full_name')
+
+        if actor is not None:
+            if actor.role in {'owner', 'admin'}:
+                pass
+            elif actor.role == 'manager':
+                managed_position_ids = cls.managed_position_ids(actor)
+                descendant_ids = [
+                    user.pk for user in queryset
+                    if user.is_descendant_of(actor)
+                ]
+                queryset = queryset.filter(
+                    models.Q(pk__in=descendant_ids) | models.Q(positions__pk__in=managed_position_ids)
+                ).distinct()
+            else:
+                queryset = queryset.none()
+
         if required_positions is not None:
             required_position_ids = list(required_positions.values_list('pk', flat=True))
             if required_position_ids:
                 queryset = queryset.filter(positions__in=required_position_ids).distinct()
         return queryset
 
-    @staticmethod
-    def validate_assignment(*, assigned_to, required_positions):
+    @classmethod
+    def validate_assignment(cls, *, actor=None, assigned_to, required_positions):
         if assigned_to is None:
             return
-        if assigned_to.role != 'staff':
-            raise ValidationError(f'{assigned_to.full_name} cannot be assigned because only staff users are eligible for task assignment.')
+        if actor is None:
+            if assigned_to.role != 'staff':
+                raise ValidationError(
+                    f'{assigned_to.full_name} cannot be assigned without an assigning user context.'
+                )
+        elif not cls.can_assign_to(actor=actor, assigned_to=assigned_to):
+            raise ValidationError(
+                f'{actor.full_name} is not authorized to assign tasks to {assigned_to.full_name}. '
+                'Tasks can only be assigned within your organizational jurisdiction.'
+            )
         if required_positions is None:
             return
         required_position_ids = list(required_positions.values_list('pk', flat=True))
@@ -523,7 +611,7 @@ class MaintenanceWorkflowService:
         category_positions = issue.category.assignable_positions.filter(is_active=True)
         if category_positions.exists():
             task.required_positions.set(category_positions)
-            TaskAssignmentService.validate_assignment(assigned_to=assigned_to, required_positions=category_positions)
+            TaskAssignmentService.validate_assignment(actor=user, assigned_to=assigned_to, required_positions=category_positions)
         issue.task = task
         issue.updated_by = user
         issue.save(update_fields=['task', 'updated_by', 'updated_at'])
@@ -561,6 +649,7 @@ class MaintenanceWorkflowService:
             assigned_to = existing_task.assigned_to
         category_positions = issue.category.assignable_positions.filter(is_active=True)
         TaskAssignmentService.validate_assignment(
+            actor=user,
             assigned_to=assigned_to,
             required_positions=category_positions,
         )
@@ -591,6 +680,7 @@ class MaintenanceWorkflowService:
             )
         elif existing_task:
             TaskAssignmentService.validate_assignment(
+                actor=user,
                 assigned_to=existing_task.assigned_to,
                 required_positions=category_positions,
             )

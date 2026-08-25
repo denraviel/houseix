@@ -12,5 +12,6 @@ urlpatterns = [
     path('<int:pk>/edit/', views.InvoiceUpdateView.as_view(), name='invoice_update'),
     path('<int:pk>/payment/', views.InvoicePaymentView.as_view(), name='invoice_payment'),
     path('<int:pk>/print/', views.InvoicePrintView.as_view(), name='invoice_print'),
+    path('<int:pk>/print/thermal/', views.InvoiceThermalPrintView.as_view(), name='invoice_thermal_print'),
     path('<int:pk>/pdf/', views.InvoicePDFView.as_view(), name='invoice_pdf'),
 ]

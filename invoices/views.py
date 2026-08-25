@@ -31,7 +31,7 @@ class InvoiceListView(OperationalModuleAccessMixin, ListView):
 
     def get_queryset(self):
         queryset = Invoice.objects.select_related(
-            'stay__customer', 'stay__room', 'created_by', 'updated_by', 'assigned_to'
+            'stay__customer', 'stay__room', 'customer', 'created_by', 'updated_by', 'assigned_to'
         )
         if self.request.user.role == 'staff':
             queryset = queryset.filter(assigned_to=self.request.user)
@@ -45,6 +45,8 @@ class InvoiceListView(OperationalModuleAccessMixin, ListView):
                     | Q(stay__customer__full_name__icontains=query)
                     | Q(stay__customer__customer_id__icontains=query)
                     | Q(stay__room__room_number__icontains=query)
+                    | Q(customer__full_name__icontains=query)
+                    | Q(customer__customer_id__icontains=query)
                 )
             if status:
                 queryset = queryset.filter(status=status)
@@ -64,19 +66,27 @@ class InvoiceDetailView(InvoiceAccessMixin, DetailView):
 
     def get_queryset(self):
         return Invoice.objects.select_related(
-            'stay__customer', 'stay__room', 'created_by', 'updated_by', 'assigned_to'
-        )
+            'stay__customer', 'stay__room', 'customer', 'created_by', 'updated_by', 'assigned_to'
+        ).prefetch_related('sales__sale__product', 'sales__sale__recorded_by')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         calculations = InvoiceCalculationService(self.object)
         context.update(calculations.build_context())
-        context['charge_mode_text'] = (
-            "Provisional balance based on today's date because the stay is still active."
-            if context.get('is_provisional')
-            else 'Final balance based on recorded checkout date.'
-        )
-        context['room_label'] = f'Room {context["room"].room_number} ({context["room"].get_room_type_display()})'
+
+        if self.object.is_guest_stay_invoice:
+            context['charge_mode_text'] = (
+                "Provisional balance based on today's date because the stay is still active."
+                if context.get('is_provisional')
+                else 'Final balance based on recorded checkout date.'
+            )
+            if context.get('room'):
+                context['room_label'] = f'Room {context["room"].room_number} ({context["room"].get_room_type_display()})'
+            else:
+                context['room_label'] = '-'
+        else:
+            context['charge_mode_text'] = 'Sales invoice - balance based on recorded sale items.'
+
         context['ownership_details'] = {
             'created_by': self.object.created_by.full_name if self.object.created_by else '-',
             'updated_by': self.object.updated_by.full_name if self.object.updated_by else '-',
@@ -237,7 +247,9 @@ class InvoicePrintView(InvoiceAccessMixin, DetailView):
     context_object_name = 'invoice'
 
     def get_queryset(self):
-        return Invoice.objects.select_related('stay__customer', 'stay__room', 'assigned_to')
+        return Invoice.objects.select_related(
+            'stay__customer', 'stay__room', 'customer', 'assigned_to'
+        ).prefetch_related('sales__sale__product')
 
     def get(self, request, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
@@ -246,6 +258,32 @@ class InvoicePrintView(InvoiceAccessMixin, DetailView):
             action_type=InvoiceAuditLog.ACTION_PRINTED,
             user=request.user,
             notes='Opened print view.',
+        )
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(InvoiceCalculationService(self.object).build_context())
+        return context
+
+
+class InvoiceThermalPrintView(InvoiceAccessMixin, DetailView):
+    model = Invoice
+    template_name = 'invoices/invoice_thermal_58mm.html'
+    context_object_name = 'invoice'
+
+    def get_queryset(self):
+        return Invoice.objects.select_related(
+            'stay__customer', 'stay__room', 'customer', 'assigned_to'
+        ).prefetch_related('sales__sale__product')
+
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        InvoiceAuditLog.log(
+            invoice=self.object,
+            action_type=InvoiceAuditLog.ACTION_PRINTED,
+            user=request.user,
+            notes='Opened 58mm thermal print view.',
         )
         return response
 

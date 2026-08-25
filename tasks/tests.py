@@ -370,3 +370,80 @@ class MaintenanceWorkflowTests(TestCase):
             assigned_to=multi_position_staff,
             required_positions=required_positions,
         )
+class PositionAuthorityAssignmentTests(TestCase):
+    """
+    Covers task-assignment authority that is granted through the
+    JobPosition.manages_positions graph rather than the reports_to chain.
+    Mirrors the real hotel scenario: an Operations Manager and a Bar
+    Supervisor can both hold role='manager', but only specific positions
+    should be able to assign tasks to specific other positions.
+    """
+
+    def setUp(self):
+        self.ops_manager_position = JobPosition.objects.get(code='operations_manager')
+        self.bar_supervisor_position, _ = JobPosition.objects.get_or_create(
+            code='bar_supervisor',
+            defaults={
+                'name': 'Bar Supervisor',
+                'department': JobPosition.DEPARTMENT_FOOD_BEVERAGE,
+            },
+        )
+        self.barman_position = JobPosition.objects.get(code='barman')
+
+        # Direct edges: Ops Manager -> Bar Supervisor -> Barman.
+        self.ops_manager_position.manages_positions.add(self.bar_supervisor_position)
+        self.bar_supervisor_position.manages_positions.add(self.barman_position)
+
+        self.ops_manager = CustomUser.objects.create_user(
+            email='ops.manager@example.com',
+            password='password123',
+            full_name='Ops Manager',
+            phone_number='08000000101',
+            role='manager',
+            positions=[self.ops_manager_position],
+        )
+        self.bar_supervisor = CustomUser.objects.create_user(
+            email='bar.supervisor@example.com',
+            password='password123',
+            full_name='Bar Supervisor',
+            phone_number='08000000102',
+            role='manager',
+            positions=[self.bar_supervisor_position],
+        )
+        self.barman = CustomUser.objects.create_user(
+            email='barman@example.com',
+            password='password123',
+            full_name='Barman User',
+            phone_number='08000000103',
+            role='staff',
+            positions=[self.barman_position],
+        )
+
+    def test_operations_manager_can_assign_to_barman_transitively(self):
+        # No reports_to link exists between them; authority comes purely
+        # from the position graph, and is transitive across Bar Supervisor.
+        self.assertTrue(
+            TaskAssignmentService.can_assign_to(actor=self.ops_manager, assigned_to=self.barman)
+        )
+
+    def test_bar_supervisor_can_assign_to_barman(self):
+        self.assertTrue(
+            TaskAssignmentService.can_assign_to(actor=self.bar_supervisor, assigned_to=self.barman)
+        )
+
+    def test_bar_supervisor_cannot_assign_to_operations_manager(self):
+        # Same role ('manager'), no edge from Bar Supervisor to Operations
+        # Manager in either direction other than the one we added -> must fail.
+        self.assertFalse(
+            TaskAssignmentService.can_assign_to(actor=self.bar_supervisor, assigned_to=self.ops_manager)
+        )
+
+    def test_barman_cannot_assign_to_bar_supervisor(self):
+        self.assertFalse(
+            TaskAssignmentService.can_assign_to(actor=self.barman, assigned_to=self.bar_supervisor)
+        )
+
+    def test_assignment_candidates_includes_positionally_managed_users(self):
+        candidates = TaskAssignmentService.assignment_candidates(actor=self.bar_supervisor)
+        self.assertIn(self.barman, list(candidates))
+        self.assertNotIn(self.ops_manager, list(candidates))

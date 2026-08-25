@@ -10,10 +10,15 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
         />
         <h2 class="mb-1">{{ invoice.invoice_number }}</h2>
         <p class="text-muted mb-0">
-            Invoice for {{ customer.full_name }} in Room {{ room.room_number }}
+            {% if is_guest_stay_invoice %}
+                Invoice for {{ customer.full_name }} in Room {{ room.room_number }}
+            {% else %}
+                Standalone Sales Invoice
+                {% if customer %} for {{ customer.full_name }}{% endif %}
+            {% endif %}
         </p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         <a href="{% url 'invoice_list' %}" class="btn btn-outline-secondary"
             >Back</a
         >
@@ -29,7 +34,12 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
         <a
             href="{% url 'invoice_print' invoice.pk %}"
             class="btn btn-outline-dark"
-            >Print</a
+            >Print (A4)</a
+        >
+        <a
+            href="{% url 'invoice_thermal_print' invoice.pk %}"
+            class="btn btn-outline-secondary"
+            >Print 58mm</a
         >
         <a
             href="{% url 'invoice_pdf' invoice.pk %}"
@@ -43,6 +53,14 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
     <div class="col-lg-8">
         <div class="card mb-4">
             <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-4 text-muted">Invoice Type</div>
+                    <div class="col-md-8">
+                        <span class="badge {% if is_guest_stay_invoice %}bg-info{% else %}bg-secondary{% endif %}">
+                            {{ invoice.get_invoice_type_display }}
+                        </span>
+                    </div>
+                </div>
                 <div class="row mb-2">
                     <div class="col-md-4 text-muted">Invoice Status</div>
                     <div class="col-md-8">
@@ -58,9 +76,16 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
                     </div>
                 </div>
                 <div class="row mb-2">
-                    <div class="col-md-4 text-muted">Guest</div>
-                    <div class="col-md-8">{{ customer.full_name }}</div>
+                    <div class="col-md-4 text-muted">Customer</div>
+                    <div class="col-md-8">
+                        {% if customer %}
+                            {{ customer.full_name }}
+                        {% else %}
+                            <span class="text-muted">Walk-in Customer</span>
+                        {% endif %}
+                    </div>
                 </div>
+                {% if customer %}
                 <div class="row mb-2">
                     <div class="col-md-4 text-muted">Customer ID</div>
                     <div class="col-md-8">
@@ -71,6 +96,9 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
                     <div class="col-md-4 text-muted">Phone</div>
                     <div class="col-md-8">{{ customer.phone_number }}</div>
                 </div>
+                {% endif %}
+
+                {% if is_guest_stay_invoice %}
                 <div class="row mb-2">
                     <div class="col-md-4 text-muted">Room</div>
                     <div class="col-md-8">{{ room_label }}</div>
@@ -97,9 +125,51 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
                         >
                     </div>
                 </div>
+                {% else %}
+                <div class="row mb-2">
+                    <div class="col-md-4 text-muted">Sale Date</div>
+                    <div class="col-md-8">
+                        {% if sale_created_at %}
+                            {{ sale_created_at|date:"Y-m-d H:i" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4 text-muted">Sale Payment Method</div>
+                    <div class="col-md-8">
+                        {{ sale_payment_method|default:"-" }}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4 text-muted">Recorded By</div>
+                    <div class="col-md-8">
+                        {% if sale_recorded_by %}
+                            {{ sale_recorded_by.full_name }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-0">
+                    <div class="col-md-4 text-muted">Linked Sale</div>
+                    <div class="col-md-8">
+                        {% for invoice_sale in invoice.sales.all %}
+                            <a href="{% url 'sale_detail' invoice_sale.sale.pk %}">
+                                Sale #{{ invoice_sale.sale.pk }}
+                            </a>
+                            {% if not forloop.last %}, {% endif %}
+                        {% empty %}
+                            <span class="text-muted">-</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
 
+        {% if is_guest_stay_invoice %}
         <div class="card mb-4">
             <div class="card-header"><strong>Room Charges</strong></div>
             <div class="card-body">
@@ -129,9 +199,18 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <div class="card mb-4">
-            <div class="card-header"><strong>Product Charges</strong></div>
+            <div class="card-header">
+                <strong>
+                    {% if is_guest_stay_invoice %}
+                        Product Charges
+                    {% else %}
+                        Invoice Items
+                    {% endif %}
+                </strong>
+            </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-striped align-middle mb-0">
@@ -141,8 +220,10 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
                                 <th>Quantity</th>
                                 <th>Unit Price</th>
                                 <th>Total</th>
+                                {% if is_guest_stay_invoice %}
                                 <th>Recorded By</th>
                                 <th>Recorded At</th>
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -152,13 +233,19 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
                                 <td>{{ sale.quantity }}</td>
                                 <td>N{{ sale.unit_price|floatformat:2 }}</td>
                                 <td>N{{ sale.total_amount|floatformat:2 }}</td>
+                                {% if is_guest_stay_invoice %}
                                 <td>{{ sale.recorded_by.full_name }}</td>
                                 <td>{{ sale.created_at|date:"Y-m-d H:i" }}</td>
+                                {% endif %}
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="6" class="text-center">
-                                    No product sales linked to this stay.
+                                <td colspan="{% if is_guest_stay_invoice %}6{% else %}4{% endif %}" class="text-center">
+                                    {% if is_guest_stay_invoice %}
+                                        No product sales linked to this stay.
+                                    {% else %}
+                                        No items on this invoice.
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -218,10 +305,12 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
         <div class="card mb-4">
             <div class="card-header"><strong>Invoice Totals</strong></div>
             <div class="card-body">
+                {% if is_guest_stay_invoice %}
                 <div class="d-flex justify-content-between mb-2">
                     <span>Room Total</span>
                     <strong>N{{ room_charge_total|floatformat:2 }}</strong>
                 </div>
+                {% endif %}
                 <div class="d-flex justify-content-between mb-2">
                     <span>Product Total</span>
                     <strong>N{{ product_charge_total|floatformat:2 }}</strong>
@@ -231,31 +320,42 @@ invoice.invoice_number }} - HouseIX Ops {% endblock %} {% block content %}
                     <strong>N{{ grand_total|floatformat:2 }}</strong>
                 </div>
                 <hr />
+                {% if is_guest_stay_invoice %}
                 <div class="d-flex justify-content-between mb-2">
                     <span>Room Payments</span>
                     <strong>N{{ room_payments_total|floatformat:2 }}</strong>
                 </div>
+                {% endif %}
                 <div class="d-flex justify-content-between mb-2">
                     <span>Product Payments</span>
                     <strong>N{{ product_payments_total|floatformat:2 }}</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span>Total Payments</span>
-                    <strong>N{{ total_payments|floatformat:2 }}</strong>
+                    <strong>N{{ total_payments_total|floatformat:2 }}</strong>
                 </div>
                 <hr />
+                {% if is_guest_stay_invoice %}
                 <div class="d-flex justify-content-between mb-2">
                     <span>Room Balance</span>
                     <strong>N{{ room_balance|floatformat:2 }}</strong>
                 </div>
+                {% endif %}
                 <div class="d-flex justify-content-between mb-2">
                     <span>Product Balance</span>
                     <strong>N{{ product_balance|floatformat:2 }}</strong>
                 </div>
                 <div class="d-flex justify-content-between">
                     <span>Outstanding Balance</span>
-                    <strong>N{{ balance|floatformat:2 }}</strong>
+                    <strong class="{% if balance == 0 %}text-success{% else %}text-danger{% endif %}">
+                        N{{ balance|floatformat:2 }}
+                    </strong>
                 </div>
+                {% if balance_paid_in_full %}
+                <div class="mt-3 alert alert-success mb-0 py-2 small">
+                    <i class="bi bi-check-circle-fill"></i> Paid in full.
+                </div>
+                {% endif %}
             </div>
         </div>
 

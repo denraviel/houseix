@@ -1,118 +1,67 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}Audit Task - HouseIX Ops{% endblock %}
+{% block title %}Audit Inspection - HouseIX Ops{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h2 class="mb-0">Audit Task</h2>
-    <div class="text-muted">Review completed work against a reusable inspection template.</div>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{% url 'inspection_detail' inspection.pk %}" class="btn btn-outline-secondary">View Summary</a>
-    <a href="{% url 'task_list' %}" class="btn btn-outline-secondary">Back to Tasks</a>
-  </div>
+    <div>
+        <h2 class="mb-0">Audit Inspection</h2>
+        <div class="text-muted">Complete checklist and submit the final audit result.</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'inspection_list' %}" class="btn btn-outline-secondary">Dashboard</a>
+        <a href="{% url 'task_list' %}" class="btn btn-outline-secondary">Tasks</a>
+    </div>
 </div>
 
 <div class="row g-4">
-  <div class="col-lg-9">
-    <div class="card mb-4">
-      <div class="card-header"><strong>Task Overview</strong></div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-4"><span class="text-muted">Task:</span> {{ task.title }}</div>
-          <div class="col-md-4"><span class="text-muted">Room:</span> {% if task.room %}{{ task.room.room_number }}{% else %}-{% endif %}</div>
-          <div class="col-md-4"><span class="text-muted">Assigned Worker:</span> {{ inspection.worker.full_name }}</div>
-          <div class="col-md-4"><span class="text-muted">Template:</span> {{ inspection.template.name }}</div>
-          <div class="col-md-4"><span class="text-muted">Inspection Date:</span> {{ inspection.updated_at|date:"M d, Y H:i" }}</div>
-          <div class="col-md-4"><span class="text-muted">Task Type:</span> {{ task.get_task_type_display }}</div>
-          <div class="col-md-4"><span class="text-muted">Status:</span> {{ task.get_status_display }}</div>
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><strong>Task & Audit Summary</strong></div>
+            <div class="card-body">
+                <div class="mb-2"><span class="text-muted">Task:</span> {{ task.title }}</div>
+                <div class="mb-2"><span class="text-muted">Room:</span> {% if task.room %}{{ task.room.room_number }}{% else %}-{% endif %}</div>
+                <div class="mb-2"><span class="text-muted">Worker:</span> {{ task.assigned_to.full_name }}</div>
+                <div class="mb-2"><span class="text-muted">Due Date:</span> {{ task.due_date }}</div>
+                <div class="mb-0"><span class="text-muted">Task Status:</span> {{ task.get_status_display }}</div>
+                <hr>
+                <div class="mb-2"><span class="text-muted">Inspector:</span> {{ request.user.full_name }}</div>
+                <div class="mb-0"><span class="text-muted">Date:</span> {% now "M d, Y H:i" %}</div>
+            </div>
         </div>
-      </div>
     </div>
-
-    <form method="post" action="{% url 'inspection_submit' inspection.pk %}" id="inspection-form">
-      {% csrf_token %}
-      {{ result_formset.management_form }}
-      {% if inspection_form.non_field_errors %}
-      <div class="alert alert-danger">
-        {% for error in inspection_form.non_field_errors %}
-        <div>{{ error }}</div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      {% for form in result_formset.forms %}
-      {% for hidden in form.hidden_fields %}
-      {{ hidden }}
-      {% endfor %}
-      {% endfor %}
-
-      <div class="card mb-4">
-        <div class="card-header"><strong>Checklist</strong></div>
-        <div class="card-body">
-          {% include 'tasks/inspection/partials/checklist_table.html' %}
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><strong>Checklist & Result</strong></div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% for field in form %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <div class="form-text">{{ field.help_text }}</div>
+                            {% endif %}
+                            {% for error in field.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Submit Inspection</button>
+                        <a href="{% url 'inspection_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header"><strong>Inspector Notes</strong></div>
-        <div class="card-body">
-          {{ inspection_form.inspector_notes }}
-          {% for error in inspection_form.inspector_notes.errors %}
-          <div class="text-danger small">{{ error }}</div>
-          {% endfor %}
-          <div class="d-flex gap-2 mt-3">
-            <button type="submit" formaction="{% url 'inspection_update' inspection.pk %}" class="btn btn-outline-primary">Save Draft</button>
-            <button type="submit" class="btn btn-success">Submit Inspection</button>
-          </div>
-        </div>
-      </div>
-    </form>
-  </div>
-
-  <div class="col-lg-3">
-    {% include 'tasks/inspection/partials/score_card.html' %}
-  </div>
+    </div>
 </div>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const rows = document.querySelectorAll("tr[data-deduction]");
-    const startingScore = Number(document.getElementById("starting-score").textContent || "100");
-    const deductionEl = document.getElementById("deduction-total");
-    const scoreEl = document.getElementById("live-score");
-    const resultEl = document.getElementById("live-result");
-
-    function updateScoreCard() {
-      let deductions = 0;
-      rows.forEach((row) => {
-        const failInput = row.querySelector('input[type="radio"][value="False"]:checked');
-        if (failInput) {
-          deductions += Number(row.dataset.deduction || "0");
-        }
-      });
-
-      const score = Math.max(startingScore - deductions, 0);
-      let result = "Fail";
-      if (score >= 95) {
-        result = "Excellent";
-      } else if (score >= 85) {
-        result = "Pass";
-      }
-
-      deductionEl.textContent = deductions;
-      scoreEl.textContent = score;
-      resultEl.textContent = result;
-    }
-
-    rows.forEach((row) => {
-      row.querySelectorAll('input[type="radio"]').forEach((input) => {
-        input.addEventListener("change", updateScoreCard);
-      });
-    });
-
-    updateScoreCard();
-  });
-</script>
 {% endblock %}

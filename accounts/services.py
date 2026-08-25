@@ -546,3 +546,149 @@ class AccountOnboardingService:
         AuditLog.log(user, 'password_changed', f'Updated password for {user.email}.')
         AuditLog.log(user, 'first_login_completed', f'Completed first login setup for {user.email}.')
         return user
+
+
+class UserHierarchyService:
+    OPERATIONS_MANAGER_CODE = 'operations_manager'
+
+    SUPERVISOR_POSITION_CODES = [
+        'hotel_administrator',
+        'front_office_supervisor',
+        'housekeeping_supervisor',
+        'maintenance_supervisor',
+        'security_supervisor',
+        'chef',
+        'store_keeper',
+        'procurement_officer',
+        'account_officer',
+        'marketing_officer',
+    ]
+
+    ROLE_PRIORITY = {
+        'owner': 4,
+        'admin': 3,
+        'manager': 2,
+        'staff': 1,
+    }
+
+    @classmethod
+    def _get_custom_user_model(cls):
+        try:
+            from .models import CustomUser
+            return CustomUser
+        except Exception:
+            return None
+
+    @classmethod
+    def _get_job_position_model(cls):
+        try:
+            from .models import JobPosition
+            return JobPosition
+        except Exception:
+            return None
+
+    @classmethod
+    def get_operations_manager(cls, using=None):
+        CustomUser = cls._get_custom_user_model()
+        if CustomUser is None:
+            return None
+        qs = CustomUser.objects.filter(
+            positions__code=cls.OPERATIONS_MANAGER_CODE,
+            is_active=True,
+        ).distinct()
+        if using:
+            qs = qs.using(using)
+        if not qs.exists():
+            return None
+
+        def _role_rank(user):
+            return cls.ROLE_PRIORITY.get(user.role, 0)
+
+        ordered = sorted(qs, key=lambda u: (-_role_rank(u), u.date_joined))
+        return ordered[0]
+
+    @classmethod
+    def get_supervisor_position_codes(cls):
+        return list(cls.SUPERVISOR_POSITION_CODES)
+
+    @classmethod
+    def is_supervisor_user(cls, user):
+        codes = set(user.positions.filter(is_active=True).values_list('code', flat=True))
+        return bool(codes & set(cls.SUPERVISOR_POSITION_CODES))
+
+    @classmethod
+    def is_operations_manager_user(cls, user):
+        return user.positions.filter(
+            code=cls.OPERATIONS_MANAGER_CODE,
+            is_active=True,
+        ).exists()
+
+    @classmethod
+    def should_auto_assign_reports_to(cls, user, *, operations_manager=None):
+        if not getattr(user, 'is_active', False):
+            return False
+        if not cls.is_supervisor_user(user):
+            return False
+        if user.reports_to_id is not None:
+            return False
+        if operations_manager is None:
+            operations_manager = cls.get_operations_manager()
+        if operations_manager is None:
+            return False
+        if operations_manager.pk == user.pk:
+            return False
+        if user.is_descendant_of(operations_manager):
+            return False
+        if operations_manager.is_descendant_of(user):
+            return False
+        return True
+
+    @classmethod
+    @transaction.atomic
+    def ensure_hierarchy_for_user(cls, user, *, operations_manager=None, audit_actor=None):
+        if operations_manager is None:
+            operations_manager = cls.get_operations_manager()
+        if not cls.should_auto_assign_reports_to(user, operations_manager=operations_manager):
+            return user
+        user.reports_to = operations_manager
+        user.save(update_fields=['reports_to'])
+        AuditLog.log(
+            audit_actor or operations_manager or user,
+            'hierarchy_auto_assigned',
+            f'Auto-assigned {user.email} to report to Operations Manager {operations_manager.email}.',
+        )
+        return user
+
+    @classmethod
+    @transaction.atomic
+    def ensure_all_users_hierarchy(cls, *, audit_actor=None, using=None):
+        operations_manager = cls.get_operations_manager(using=using)
+        if operations_manager is None:
+            return 0
+        CustomUser = cls._get_custom_user_model()
+        if CustomUser is None:
+            return 0
+        supervisor_codes = cls.get_supervisor_position_codes()
+        qs = CustomUser.objects.filter(
+            positions__code__in=supervisor_codes,
+            reports_to__isnull=True,
+            is_active=True,
+        ).exclude(pk=operations_manager.pk).distinct()
+        if using:
+            qs = qs.using(using)
+        updated_count = 0
+        for user in qs.iterator(chunk_size=100):
+            if user.is_descendant_of(operations_manager):
+                continue
+            try:
+                user.reports_to = operations_manager
+                user.save(update_fields=['reports_to'])
+                AuditLog.log(
+                    audit_actor or operations_manager,
+                    'hierarchy_auto_assigned',
+                    f'Auto-assigned {user.email} to report to Operations Manager {operations_manager.email}.',
+                )
+                updated_count += 1
+            except Exception:
+                pass
+        return updated_count

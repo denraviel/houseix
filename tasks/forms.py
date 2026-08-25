@@ -23,23 +23,26 @@ class TaskForm(forms.ModelForm):
         fields = ['title', 'task_type', 'description', 'room', 'required_positions', 'assigned_to', 'priority', 'due_date', 'status', 'requires_inspection']
 
     def __init__(self, *args, **kwargs):
+        self.actor = kwargs.pop('actor', None)
         super().__init__(*args, **kwargs)
         if self.is_bound:
             required_position_ids = [value for value in self.data.getlist('required_positions') if value.isdigit()]
             if required_position_ids:
                 self.fields['assigned_to'].queryset = TaskAssignmentService.assignment_candidates(
+                    actor=self.actor,
                     required_positions=self.fields['required_positions'].queryset.filter(pk__in=required_position_ids)
                 )
             else:
-                self.fields['assigned_to'].queryset = TaskAssignmentService.assignment_candidates()
+                self.fields['assigned_to'].queryset = TaskAssignmentService.assignment_candidates(actor=self.actor)
         else:
             required_positions = self.instance.required_positions.all() if self.instance.pk else None
             self.fields['assigned_to'].queryset = TaskAssignmentService.assignment_candidates(
+                actor=self.actor,
                 required_positions=required_positions
             )
         self.fields['required_positions'].required = False
         self.fields['required_positions'].help_text = 'Optional. Users with at least one matching position can be assigned.'
-        self.fields['assigned_to'].help_text = 'Only staff matching at least one required position can be assigned.'
+        self.fields['assigned_to'].help_text = 'Only users within your organizational jurisdiction and matching the required position can be assigned.'
         for field_name, field in self.fields.items():
             if isinstance(field.widget, forms.widgets.Input):
                 field.widget.attrs['class'] = 'form-control'
@@ -53,6 +56,7 @@ class TaskForm(forms.ModelForm):
         status = cleaned_data.get('status')
         requires_inspection = cleaned_data.get('requires_inspection')
         TaskAssignmentService.validate_assignment(
+            actor=self.actor,
             assigned_to=cleaned_data.get('assigned_to'),
             required_positions=cleaned_data.get('required_positions'),
         )
@@ -284,6 +288,7 @@ class MaintenanceIssueForm(MaintenanceBootstrapFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.actor = kwargs.pop('actor', None)
         super().__init__(*args, **kwargs)
         self.fields['category'].queryset = MaintenanceCategory.objects.filter(is_active=True).order_by('name')
         self.fields['room'].required = False
@@ -338,9 +343,10 @@ class MaintenanceIssueAssignForm(MaintenanceBootstrapFormMixin, forms.ModelForm)
         fields = ['assigned_to', 'priority', 'status', 'requires_external_vendor', 'requires_expense']
 
     def __init__(self, *args, **kwargs):
+        self.actor = kwargs.pop('actor', None)
         super().__init__(*args, **kwargs)
         category_positions = self.instance.category.assignable_positions.filter(is_active=True) if getattr(self.instance, 'category_id', None) else None
-        self.fields['assigned_to'].queryset = TaskAssignmentService.assignment_candidates(required_positions=category_positions)
+        self.fields['assigned_to'].queryset = TaskAssignmentService.assignment_candidates(actor=self.actor, required_positions=category_positions)
         self.fields['assigned_to'].required = False
         self.fields['status'].choices = [
             (MaintenanceIssue.STATUS_ACKNOWLEDGED, 'Acknowledged'),
@@ -363,18 +369,20 @@ class MaintenanceIssueAssignForm(MaintenanceBootstrapFormMixin, forms.ModelForm)
         if create_task and existing_task:
             raise forms.ValidationError('Choose either an existing task or create a new task.')
         if create_task and not assigned_to:
-            self.add_error('assigned_to', 'Assign a staff user before creating a task.')
+            self.add_error('assigned_to', 'Assign an authorized user before creating a task.')
         if create_task and not task_due_date:
             self.add_error('task_due_date', 'Provide a due date for the linked task.')
         if status == MaintenanceIssue.STATUS_ASSIGNED and not assigned_to and not existing_task:
             self.add_error('assigned_to', 'Assigned status requires an assigned staff member or linked task.')
         category_positions = self.instance.category.assignable_positions.filter(is_active=True)
         TaskAssignmentService.validate_assignment(
+            actor=self.actor,
             assigned_to=assigned_to,
             required_positions=category_positions,
         )
         if existing_task:
             TaskAssignmentService.validate_assignment(
+                actor=self.actor,
                 assigned_to=existing_task.assigned_to,
                 required_positions=category_positions,
             )

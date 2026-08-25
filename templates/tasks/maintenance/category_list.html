@@ -3,41 +3,65 @@
 {% block title %}Maintenance Categories - HouseIX Ops{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h2 class="mb-1">Maintenance Categories</h2>
-    <div class="text-muted">Manage reusable maintenance categories for issue reporting.</div>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{% url 'maintenance_dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
-    <a href="{% url 'maintenance_category_create' %}" class="btn btn-primary">New Category</a>
-  </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0">Maintenance Categories</h2>
+        <div class="text-muted">Organize and manage maintenance issue categories.</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'maintenance_dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
+        <a href="{% url 'maintenance_category_create' %}" class="btn btn-primary">Add Category</a>
+    </div>
 </div>
 
 <div class="card">
-  <div class="table-responsive">
-    <table class="table table-hover mb-0">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Status</th>
-          <th>Updated</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for category in categories %}
-        <tr>
-          <td>{{ category.name }}</td>
-          <td>{{ category.description|default:"-" }}</td>
-          <td>{% if category.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
-          <td>{{ category.updated_at|date:"Y-m-d H:i" }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="4" class="text-center text-muted py-4">No maintenance categories found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Assignable Positions</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td class="fw-semibold">{{ category.name }}</td>
+                        <td>{% if category.description %}{{ category.description }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                        <td>
+                            {% if category.assignable_positions.all %}
+                            <span class="fw-semibold">{{ category.assignable_positions.all|length }} position(s)</span>
+                            <div class="small text-muted">
+                                {% for pos in category.assignable_positions.all %}{{ pos.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if category.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% url 'maintenance_category_create' as create_url %}
+                            <a href="{{ create_url }}?edit={{ category.pk }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">No maintenance categories found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 {% endblock %}

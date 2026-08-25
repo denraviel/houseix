@@ -5,60 +5,98 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h2 class="mb-0">Inspection Detail</h2>
-        <div class="text-muted">Review checklist outcomes, deductions, and final result.</div>
+        <h2 class="mb-0">Inspection #{{ inspection.pk }}</h2>
+        <div class="text-muted">
+            Task: <strong>{{ inspection.task.title }}</strong>
+            {% if inspection.task.room %} · Room {{ inspection.task.room.room_number }}{% endif %}
+        </div>
     </div>
     <div class="d-flex gap-2">
-        {% if can_edit %}
-        <a href="{% url 'inspection_update' inspection.pk %}" class="btn btn-primary">Continue Audit</a>
-        {% endif %}
-        <a href="{% url 'inspection_list' %}" class="btn btn-outline-secondary">Back to Inspections</a>
+        <a href="{% url 'inspection_history' %}" class="btn btn-outline-secondary">History</a>
+        <a href="{% url 'task_list' %}" class="btn btn-outline-secondary">Tasks</a>
     </div>
 </div>
 
-{% include 'tasks/inspection/partials/inspection_summary.html' %}
-
-<div class="card">
-    <div class="card-header"><strong>Checklist Results</strong></div>
-    <div class="card-body">
-        {% for section in sections %}
-        <div class="mb-4">
-            <h5>{{ section.label }}</h5>
-            <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead>
-                        <tr>
-                            <th>Checklist Item</th>
-                            <th>Status</th>
-                            <th>Deduction</th>
-                            <th>Comment</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for result in section.items %}
-                        <tr>
-                            <td>
-                                <div class="fw-semibold">{{ result.template_item.description }}</div>
-                                <div class="small text-muted">{{ result.template_item.get_severity_display }}</div>
-                            </td>
-                            <td>
-                                {% if result.passed %}
-                                <span class="badge bg-success">Pass</span>
-                                {% else %}
-                                <span class="badge bg-danger">Fail</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ result.deduction_applied }}</td>
-                            <td>{{ result.comment|default:"-" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card mb-3">
+            <div class="card-header"><strong>Inspection Summary</strong></div>
+            <div class="card-body">
+                <div class="mb-2"><span class="text-muted">Result:</span>
+                    {% if inspection.result == 'passed' %}
+                    <span class="badge bg-success">Passed</span>
+                    {% elif inspection.result == 'failed' %}
+                    <span class="badge bg-danger">Failed</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Pending</span>
+                    {% endif %}
+                </div>
+                <div class="mb-2"><span class="text-muted">Inspector:</span> {{ inspection.inspector.full_name }}</div>
+                <div class="mb-2"><span class="text-muted">Worker:</span> {{ inspection.worker.full_name }}</div>
+                <div class="mb-2"><span class="text-muted">Date:</span> {{ inspection.inspection_date|date:"M d, Y" }}</div>
+                <div class="mb-2"><span class="text-muted">Score:</span>
+                    <span class="fw-semibold">{{ inspection.pass_count }} / {{ inspection.total_count }}</span>
+                    <span class="text-muted small">
+                        ({% if inspection.total_count > 0 %}{% widthratio inspection.pass_count inspection.total_count 100 %}{% else %}0{% endif %}%)
+                    </span>
+                </div>
+                <div class="mb-0"><span class="text-muted">Submission:</span>
+                    {% if inspection.is_submitted %}
+                    <span class="badge bg-dark">Submitted (Locked)</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Draft</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        {% empty %}
-        <div class="text-muted">No checklist results recorded.</div>
-        {% endfor %}
+        {% if inspection.overall_notes %}
+        <div class="card">
+            <div class="card-header"><strong>Overall Notes</strong></div>
+            <div class="card-body">
+                <p class="mb-0">{{ inspection.overall_notes|linebreaks }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><strong>Checklist Items</strong></div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Question / Item</th>
+                                <th>Result</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in inspection.results.all %}
+                            <tr>
+                                <td class="fw-semibold">{{ forloop.counter }}</td>
+                                <td>{{ result.checklist_item }}</td>
+                                <td>
+                                    {% if result.passed %}
+                                    <span class="badge bg-success">Pass</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Fail</span>
+                                    {% endif %}
+                                </td>
+                                <td>{% if result.notes %}{{ result.notes }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No checklist items recorded.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

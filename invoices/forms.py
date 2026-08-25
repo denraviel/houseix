@@ -81,9 +81,20 @@ class InvoicePaymentForm(BootstrapFormMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         self.invoice = kwargs.pop('invoice')
         super().__init__(*args, **kwargs)
-        self.fields['payment_type'].help_text = (
-            f"Room balance: N{self.invoice.room_balance:,.2f} | Product balance: N{self.invoice.product_balance:,.2f}"
-        )
+
+        if self.invoice.is_sales_invoice:
+            self.fields['payment_type'].choices = [
+                (InvoicePayment.TYPE_PRODUCT, 'Product'),
+            ]
+            self.initial['payment_type'] = InvoicePayment.TYPE_PRODUCT
+            self.fields['payment_type'].help_text = (
+                f"Standalone sales invoice - only Product payments allowed. "
+                f"Product balance: N{self.invoice.product_balance:,.2f}"
+            )
+        else:
+            self.fields['payment_type'].help_text = (
+                f"Room balance: N{self.invoice.room_balance:,.2f} | Product balance: N{self.invoice.product_balance:,.2f}"
+            )
         self._apply_bootstrap()
 
     def clean(self):
