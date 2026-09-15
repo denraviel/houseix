@@ -80,6 +80,11 @@
                 >Edit</a
               >
               <a
+                href="{% url 'product_costing_detail' product.pk %}"
+                class="btn btn-sm btn-outline-info"
+                >Costing</a
+              >
+              <a
                 href="{% url 'product_toggle_active' product.pk %}"
                 class="btn btn-sm btn-secondary"
                 >Toggle</a

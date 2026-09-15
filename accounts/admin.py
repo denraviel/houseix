@@ -64,9 +64,15 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(JobPosition)
 class JobPositionAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'department', 'is_active', 'created_at', 'updated_at')
+    list_display = ('name', 'code', 'department', 'is_active', 'manages_summary', 'created_at', 'updated_at')
     list_filter = ('department', 'is_active')
     search_fields = ('name', 'code', 'description')
+    filter_horizontal = ('manages_positions',)
+    fields = ('name', 'code', 'description', 'department', 'is_active', 'manages_positions')
+
+    @admin.display(description='Manages')
+    def manages_summary(self, obj):
+        return ', '.join(obj.manages_positions.values_list('name', flat=True)) or '-'
 
 
 @admin.register(ModulePermission)

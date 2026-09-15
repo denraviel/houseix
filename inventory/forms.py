@@ -1,4 +1,5 @@
 from django import forms
+from decimal import Decimal
 from .models import InventoryItem, StockMovement
 
 
@@ -29,8 +30,15 @@ class InventoryItemForm(forms.ModelForm):
 
 
 class AddStockForm(forms.Form):
-    quantity_to_add = forms.IntegerField(min_value=1, label='Quantity Received')
-    
+    quantity_to_add = forms.DecimalField(min_value=Decimal('0.001'), max_digits=12, decimal_places=3, label='Quantity Received')
+    unit_cost = forms.DecimalField(min_value=Decimal('0'), max_digits=12, decimal_places=2, label='Purchase Cost (per unit)')
+    supplier = forms.CharField(max_length=255, required=False, label='Supplier (optional)')
+    purchased_at = forms.DateTimeField(
+        required=False,
+        label='Purchase Date',
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():

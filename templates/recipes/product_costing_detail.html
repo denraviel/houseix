@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }} - Cost Breakdown - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">{{ product.name }} — Cost Breakdown</h2>
+    <a href="{% url 'product_list' %}" class="btn btn-outline-secondary">Back to Products</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col">
+                <div class="text-muted small">Costing Method</div>
+                <div class="fw-bold fs-5">{{ product.get_costing_method_display }}</div>
+            </div>
+            <div class="col">
+                <div class="text-muted small">Selling Price</div>
+                <div class="fw-bold fs-5">{{ product.selling_price }}</div>
+            </div>
+            <div class="col">
+                <div class="text-muted small">Current Cost</div>
+                <div class="fw-bold fs-5">{{ product.current_cost }}</div>
+            </div>
+            <div class="col">
+                <div class="text-muted small">Gross Profit</div>
+                <div class="fw-bold fs-5">{{ product.gross_profit }}</div>
+            </div>
+            <div class="col">
+                <div class="text-muted small">Food Cost %</div>
+                <div class="fw-bold fs-5">{{ product.food_cost_percentage }}%</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if recipe %}
+<div class="card">
+    <div class="card-header"><strong>{{ product.name }} — Recipe (yield: {{ recipe.yield_quantity }} {{ recipe.yield_unit }})</strong></div>
+    <div class="card-body p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr><th>Ingredient / Cost Line</th><th>Quantity</th><th>Unit Cost</th><th>Cost</th></tr>
+            </thead>
+            <tbody>
+                {% for line in breakdown %}
+                <tr>
+                    <td>{{ line.label }}</td>
+                    <td>{% if line.quantity %}{{ line.quantity }} {{ line.unit }}{% else %}-{% endif %}</td>
+                    <td>{% if line.unit_cost %}{{ line.unit_cost }}{% else %}-{% endif %}</td>
+                    <td>{{ line.cost }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="fw-bold">
+                    <td colspan="3">Total batch cost</td>
+                    <td>{{ batch_cost }}</td>
+                </tr>
+                <tr class="fw-bold">
+                    <td colspan="3">Cost per {{ recipe.yield_unit }}</td>
+                    <td>{{ product.current_cost }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="mt-2">
+    <a href="{% url 'recipe_edit' product.pk %}" class="btn btn-sm btn-outline-primary">Edit Recipe</a>
+</div>
+{% else %}
+<div class="alert alert-info">
+    This product has no recipe yet. It's using its manual cost price ({{ product.cost_price }}).
+    <a href="{% url 'recipe_edit' product.pk %}">Create a recipe</a> to switch it to inventory-based costing.
+</div>
+{% endif %}
+{% endblock %}

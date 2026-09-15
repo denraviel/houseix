@@ -5,6 +5,7 @@ from accounts.permissions import module_permission_required
 from accounts.services import NavigationService
 from .models import InventoryItem, StockMovement
 from .forms import InventoryItemForm, StockMovementForm, AddStockForm
+from .services import InventoryBatchService
 
 
 @login_required
@@ -14,9 +15,10 @@ def inventory_list(request):
         messages.error(request, 'You are not authorized to access inventory.')
         return redirect('employee_dashboard')
     items = InventoryItem.objects.all().order_by('-last_updated')
-    # Calculate stock value for each item
+    # Batch-based stock value (accurate across mixed-cost batches), not a flat multiply.
     for item in items:
-        item.stock_value = item.quantity * item.cost_price
+        item.stock_value = item.total_inventory_value
+        item.weighted_avg = item.weighted_average_cost
     return render(request, 'inventory/inventory_list.html', {'items': items})
 
 
@@ -72,16 +74,38 @@ def add_stock(request, pk):
     if request.method == 'POST':
         form = AddStockForm(request.POST)
         if form.is_valid():
-            quantity_to_add = form.cleaned_data['quantity_to_add']
-            item.quantity += quantity_to_add
-            item.save()
-            messages.success(request, f'Successfully added {quantity_to_add} {item.unit_type} to stock!')
+            InventoryBatchService.add_stock(
+                item=item,
+                quantity=form.cleaned_data['quantity_to_add'],
+                unit_cost=form.cleaned_data['unit_cost'],
+                user=request.user,
+                supplier=form.cleaned_data.get('supplier', ''),
+                purchased_at=form.cleaned_data.get('purchased_at'),
+                reference='Manual stock addition',
+            )
+            messages.success(
+                request,
+                f"Successfully added {form.cleaned_data['quantity_to_add']} {item.unit_type} to stock "
+                f"as a new batch at {form.cleaned_data['unit_cost']} per {item.unit_type}."
+            )
             from accounts.models import AuditLog
-            AuditLog.log(request.user, 'inventory_stock_added', f"Added {quantity_to_add} {item.unit_type} to {item.item_name}")
-            return redirect('inventory_list')
+            AuditLog.log(
+                request.user, 'inventory_stock_added',
+                f"Added {form.cleaned_data['quantity_to_add']} {item.unit_type} to {item.item_name} "
+                f"@ {form.cleaned_data['unit_cost']}/unit (new batch)"
+            )
+            return redirect('inventory_item_batches', pk=item.pk)
     else:
         form = AddStockForm()
     return render(request, 'inventory/add_stock_form.html', {'form': form, 'item': item})
+
+
+@login_required
+@module_permission_required(NavigationService.MODULE_INVENTORY)
+def inventory_item_batches(request, pk):
+    item = get_object_or_404(InventoryItem, pk=pk)
+    batches = item.batches.order_by('-purchased_at', '-id')
+    return render(request, 'inventory/batch_history.html', {'item': item, 'batches': batches})
 
 
 @login_required

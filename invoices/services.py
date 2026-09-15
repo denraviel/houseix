@@ -299,6 +299,44 @@ class InvoiceGeneratorService:
 
     @staticmethod
     @transaction.atomic
+    def generate_for_order(*, order, user, invoice_date=None, notes='', assigned_to=None):
+        """One invoice covering every non-cancelled line on a multi-item order."""
+        from .models import InvoiceSale
+
+        if order is None:
+            raise ValidationError('An order is required to generate a sales invoice.')
+
+        lines = list(order.items.exclude(status=Sale.STATUS_CANCELLED))
+        if not lines:
+            raise ValidationError('This order has no billable items.')
+
+        already_linked = [line for line in lines if hasattr(line, 'invoice_link') and line.invoice_link_id]
+        if already_linked:
+            return already_linked[0].invoice_link.invoice
+
+        invoice = Invoice.objects.create(
+            invoice_type=Invoice.TYPE_SALE,
+            stay=order.stay,
+            customer=order.customer,
+            invoice_date=invoice_date or timezone.localdate(),
+            notes=notes or order.notes or '',
+            assigned_to=assigned_to,
+            created_by=user,
+            updated_by=user,
+        )
+        for line in lines:
+            InvoiceSale.objects.create(invoice=invoice, sale=line)
+        InvoiceAuditLog.log(
+            invoice=invoice,
+            action_type=InvoiceAuditLog.ACTION_CREATED,
+            user=user,
+            notes=f"Sales invoice generated for order #{order.pk} ({len(lines)} item(s)).",
+        )
+        InvoiceStatusService.refresh(invoice, user=user, notes='Initial sales invoice status set.')
+        return invoice
+
+    @staticmethod
+    @transaction.atomic
     def update_invoice(*, invoice, user, invoice_date, notes, assigned_to):
         invoice.invoice_date = invoice_date
         invoice.notes = notes or ''

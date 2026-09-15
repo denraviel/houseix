@@ -3,7 +3,8 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Sales</h2>
-    <a href="{% url 'sale_create' %}" class="btn btn-primary">Record Sale</a>
+    <a href="{% url 'order_create' %}" class="btn btn-primary">New Order (multi-item)</a>
+    <a href="{% url 'sale_create' %}" class="btn btn-outline-primary">Record Single Sale</a>
 </div>
 
 <div class="card">

@@ -1,0 +1,21 @@
+# Normalize all text files to LF line endings on checkout, regardless of the
+# committer's OS or editor settings. This prevents git from reporting every
+# line of every file as "changed" purely due to CRLF/LF mismatches, and stops
+# accidental line-ending flips from masking (or reverting) real code changes.
+* text=auto eol=lf
+
+# Explicit text types (kept explicit in case autodetection misclassifies any)
+*.py text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.sh text eol=lf
+*.svg text eol=lf
+*.example text eol=lf
+*.editorconfig text eol=lf
+*.flake8 text eol=lf
+*.gitignore text eol=lf
+*.dockerignore text eol=lf

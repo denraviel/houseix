@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ item.item_name }} - Batch History - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">{{ item.item_name }} — Batch History</h2>
+    <a href="{% url 'inventory_list' %}" class="btn btn-outline-secondary">Back to Inventory</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col">
+                <div class="text-muted small">Current Stock</div>
+                <div class="fw-bold fs-5">{{ item.total_batch_quantity }} {{ item.unit_type }}</div>
+            </div>
+            <div class="col">
+                <div class="text-muted small">Inventory Value</div>
+                <div class="fw-bold fs-5">{{ item.total_inventory_value }}</div>
+            </div>
+            <div class="col">
+                <div class="text-muted small">Weighted Average Cost</div>
+                <div class="fw-bold fs-5">{{ item.weighted_average_cost }} / {{ item.unit_type }}</div>
+            </div>
+            <div class="col">
+                <div class="text-muted small">Latest Purchase Cost</div>
+                <div class="fw-bold fs-5">{{ item.latest_purchase_cost }} / {{ item.unit_type }}</div>
+            </div>
+            <div class="col">
+                <div class="text-muted small">Active Batches</div>
+                <div class="fw-bold fs-5">{{ item.active_batch_count }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><strong>Stock Batches</strong> <span class="text-muted small">(oldest consumed first — FIFO)</span></div>
+    <div class="card-body p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Batch</th>
+                    <th>Purchased</th>
+                    <th>Supplier</th>
+                    <th>Received</th>
+                    <th>Remaining</th>
+                    <th>Unit Cost</th>
+                    <th>Remaining Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for batch in batches %}
+                <tr>
+                    <td>#{{ batch.pk }}{% if batch.is_opening_balance %} <span class="badge bg-secondary">Opening</span>{% endif %}</td>
+                    <td>{{ batch.purchased_at|date:"M d, Y" }}</td>
+                    <td>{{ batch.supplier|default:"-" }}</td>
+                    <td>{{ batch.quantity_received }} {{ item.unit_type }}</td>
+                    <td>{{ batch.quantity_remaining }} {{ item.unit_type }}</td>
+                    <td>{{ batch.unit_cost }}</td>
+                    <td>{{ batch.remaining_value }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No stock batches yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

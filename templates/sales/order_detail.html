@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Order #{{ order.pk }} - House IX Ops{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Order #{{ order.pk }}</h2>
+    <a href="{% url 'sales_list' %}" class="btn btn-outline-secondary">Back to Sales</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><strong>Items</strong></div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr><th>Product</th><th>Qty</th><th>Amount</th><th>Status</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items.all %}
+                        <tr>
+                            <td>{{ item.product.name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.total_amount }}</td>
+                            <td>
+                                <span class="badge bg-{% if item.status == 'prepared' or item.status == 'completed' %}success{% elif item.status == 'cancelled' %}danger{% else %}warning text-dark{% endif %}">{{ item.get_status_display }}</span>
+                            </td>
+                            <td class="text-end">
+                                {% if can_manage and item.product.costing_method == 'recipe' %}
+                                    {% if item.status == 'created' or item.status == 'accepted' or item.status == 'preparing' %}
+                                    <form method="post" action="{% url 'sale_mark_prepared' item.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-success">Mark Prepared</button>
+                                    </form>
+                                    <form method="post" action="{% url 'sale_cancel' item.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                                    </form>
+                                    {% endif %}
+                                {% endif %}
+                                <a href="{% url 'sale_detail' item.pk %}" class="btn btn-sm btn-outline-secondary">Details</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-3">No items on this order.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header"><strong>Order Summary</strong></div>
+            <div class="card-body">
+                <div class="mb-2"><span class="text-muted">Status:</span> <strong>{{ order.status }}</strong></div>
+                <div class="mb-2"><span class="text-muted">Customer:</span> {{ order.customer.full_name|default:"Walk-in" }}</div>
+                <div class="mb-2"><span class="text-muted">Room:</span> {{ order.room|default:"-" }}</div>
+                <div class="mb-2"><span class="text-muted">Payment:</span> {{ order.get_payment_method_display }}</div>
+                <div class="mb-2"><span class="text-muted">Recorded by:</span> {{ order.recorded_by.full_name }}</div>
+                <div class="mb-2"><span class="text-muted">Created:</span> {{ order.created_at|date:"M d, Y H:i" }}</div>
+                {% if order.notes %}<div class="mb-0"><span class="text-muted">Notes:</span> {{ order.notes }}</div>{% endif %}
+                <hr>
+                <div class="d-flex justify-content-between fw-bold">
+                    <span>Total</span><span>{{ order.total_amount }}</span>
+                </div>
+            </div>
+        </div>
+
+        {% if can_manage %}
+        <form method="post" action="{% url 'order_generate_invoice' order.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary w-100">Generate Invoice for Order</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

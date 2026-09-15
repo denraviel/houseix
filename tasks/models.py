@@ -252,6 +252,11 @@ class InspectionTemplateItem(models.Model):
     SECTION_TOUCHPOINTS = 'touchpoints'
     SECTION_FLOORS_WASTE = 'floors_waste'
     SECTION_AMENITIES = 'amenities'
+    SECTION_SURFACES_EQUIPMENT = 'surfaces_equipment'
+    SECTION_FLOORS_GROUNDS = 'floors_grounds'
+    SECTION_WASTE_HYGIENE = 'waste_hygiene'
+    SECTION_SAFETY_COMPLIANCE = 'safety_compliance'
+    SECTION_STOCK_SUPPLIES = 'stock_supplies'
 
     SECTION_CHOICES = [
         (SECTION_BED_LIVING, 'Bed & Living'),
@@ -259,6 +264,11 @@ class InspectionTemplateItem(models.Model):
         (SECTION_TOUCHPOINTS, 'Touchpoints'),
         (SECTION_FLOORS_WASTE, 'Floors & Waste'),
         (SECTION_AMENITIES, 'Amenities'),
+        (SECTION_SURFACES_EQUIPMENT, 'Surfaces & Equipment'),
+        (SECTION_FLOORS_GROUNDS, 'Floors & Grounds'),
+        (SECTION_WASTE_HYGIENE, 'Waste & Hygiene'),
+        (SECTION_SAFETY_COMPLIANCE, 'Safety & Compliance'),
+        (SECTION_STOCK_SUPPLIES, 'Stock & Supplies'),
     ]
     SEVERITY_CHOICES = [
         (SEVERITY_CRITICAL, 'Critical'),
@@ -354,6 +364,18 @@ class TaskInspection(models.Model):
     @property
     def is_submitted(self):
         return self.submitted_at is not None
+
+    @property
+    def inspection_date(self):
+        return self.submitted_at or self.created_at
+
+    @property
+    def total_count(self):
+        return self.results.count()
+
+    @property
+    def pass_count(self):
+        return self.results.filter(passed=True).count()
 
 
 class InspectionResult(models.Model):

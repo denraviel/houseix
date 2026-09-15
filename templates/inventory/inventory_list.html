@@ -37,7 +37,7 @@
         <td>{{ item.get_category_display }}</td>
         <td>{{ item.quantity }}</td>
         <td>{{ item.unit_type }}</td>
-        <td>₦{{ item.cost_price }}</td>
+        <td>₦{{ item.weighted_avg }}</td>
         <td>{{ item.low_stock_threshold }}</td>
         <td>₦{{ item.stock_value }}</td>
         <td>{{ item.last_updated }}</td>
@@ -52,6 +52,11 @@
             href="{% url 'add_stock' item.pk %}"
             class="btn btn-sm btn-success me-1"
             >Add Stock</a
+          >
+          <a
+            href="{% url 'inventory_item_batches' item.pk %}"
+            class="btn btn-sm btn-outline-secondary me-1"
+            >Batches</a
           >
           {% endif %}
           {% if user.role == 'owner' or user.role == 'admin' %}

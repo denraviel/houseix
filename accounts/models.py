@@ -104,7 +104,7 @@ class JobPosition(AccountTrackedModel):
     code = models.CharField(max_length=50, unique=True, db_index=True)
     description = models.TextField(blank=True)
     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES, db_index=True)
-    is_active = models.BooleanField(default=True)    
+    is_active = models.BooleanField(default=True)
     manages_positions = models.ManyToManyField(
         'self',
         symmetrical=False,
@@ -115,7 +115,7 @@ class JobPosition(AccountTrackedModel):
             'independent of the reports_to chain. E.g. "Bar Supervisor" can manage_positions '
             '"Barman" and "Bartender" without needing an org-chart link.'
         ),
-    )	
+    )
 
     class Meta:
         ordering = ['department', 'name']

@@ -135,6 +135,67 @@
     </div>
 
     <div class="col-lg-4">
+        <div class="card mb-4 border-{% if sale.status == 'prepared' or sale.status == 'completed' %}success{% elif sale.status == 'cancelled' %}danger{% else %}warning{% endif %}">
+            <div class="card-header"><strong>Order Status</strong></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="badge bg-{% if sale.status == 'prepared' or sale.status == 'completed' %}success{% elif sale.status == 'cancelled' %}danger{% else %}warning text-dark{% endif %} fs-6">{{ sale.get_status_display }}</span>
+                </div>
+                {% if sale.product.costing_method == 'recipe' %}
+                    {% if sale.status == 'created' or sale.status == 'accepted' or sale.status == 'preparing' %}
+                    <p class="text-muted small">This dish has not been prepared yet - no ingredients have been deducted from inventory.</p>
+                    {% if can_manage %}
+                    <div class="d-grid gap-2">
+                        <form method="post" action="{% url 'sale_mark_prepared' sale.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100">Mark Prepared / Served</button>
+                        </form>
+                        <form method="post" action="{% url 'sale_cancel' sale.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger w-100">Cancel Order</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                    {% elif sale.status == 'prepared' %}
+                    <p class="mb-1 small"><span class="text-muted">Prepared by:</span> {{ sale.prepared_by.full_name|default:"-" }}</p>
+                    <p class="mb-0 small"><span class="text-muted">Prepared at:</span> {{ sale.prepared_at|date:"Y-m-d H:i" }}</p>
+                    {% elif sale.status == 'cancelled' %}
+                    <p class="mb-1 small"><span class="text-muted">Cancelled by:</span> {{ sale.cancelled_by.full_name|default:"-" }}</p>
+                    <p class="mb-1 small"><span class="text-muted">Cancelled at:</span> {{ sale.cancelled_at|date:"Y-m-d H:i" }}</p>
+                    {% if sale.cancellation_reason %}<p class="mb-0 small"><span class="text-muted">Reason:</span> {{ sale.cancellation_reason }}</p>{% endif %}
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted small mb-0">Manual-costed product - stock was deducted immediately at sale.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if sale.actual_cogs is not None %}
+        <div class="card mb-4">
+            <div class="card-header"><strong>Actual Cost of Goods Sold</strong></div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Actual COGS</span>
+                    <strong>₦{{ sale.actual_cogs|floatformat:2 }}</strong>
+                </div>
+                {% if sale.cogs_breakdown %}
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Ingredient</th><th>Qty</th><th>Cost</th></tr></thead>
+                    <tbody>
+                        {% for line in sale.cogs_breakdown %}
+                        <tr>
+                            <td>{{ line.inventory_item }}</td>
+                            <td>{{ line.quantity|default:"-" }}</td>
+                            <td>₦{{ line.cost }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card mb-4">
             <div class="card-header"><strong>Sale Summary</strong></div>
             <div class="card-body">

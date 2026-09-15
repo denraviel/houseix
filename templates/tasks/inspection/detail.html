@@ -77,15 +77,17 @@
                             {% for result in inspection.results.all %}
                             <tr>
                                 <td class="fw-semibold">{{ forloop.counter }}</td>
-                                <td>{{ result.checklist_item }}</td>
+                                <td>{{ result.template_item.description }}</td>
                                 <td>
-                                    {% if result.passed %}
+                                    {% if result.passed is None %}
+                                    <span class="badge bg-secondary">Pending</span>
+                                    {% elif result.passed %}
                                     <span class="badge bg-success">Pass</span>
                                     {% else %}
                                     <span class="badge bg-danger">Fail</span>
                                     {% endif %}
                                 </td>
-                                <td>{% if result.notes %}{{ result.notes }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                <td>{% if result.comment %}{{ result.comment }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
                             </tr>
                             {% empty %}
                             <tr>

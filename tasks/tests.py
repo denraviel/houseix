@@ -370,6 +370,8 @@ class MaintenanceWorkflowTests(TestCase):
             assigned_to=multi_position_staff,
             required_positions=required_positions,
         )
+
+
 class PositionAuthorityAssignmentTests(TestCase):
     """
     Covers task-assignment authority that is granted through the

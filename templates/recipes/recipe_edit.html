@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block title %}Recipe - {{ product.name }} - HouseIX Ops{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Recipe: {{ product.name }}</h2>
+    <a href="{% url 'product_list' %}" class="btn btn-outline-secondary">Back to Products</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <form method="post">
+            {% csrf_token %}
+            <div class="card mb-3">
+                <div class="card-header"><strong>Yield</strong></div>
+                <div class="card-body row g-2">
+                    <div class="col-6">
+                        <label class="form-label">{{ recipe_form.yield_quantity.label }}</label>
+                        {{ recipe_form.yield_quantity }}
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">{{ recipe_form.yield_unit.label }}</label>
+                        {{ recipe_form.yield_unit }}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">{{ recipe_form.notes.label }}</label>
+                        {{ recipe_form.notes }}
+                    </div>
+                    <div class="col-12 form-check">
+                        {{ recipe_form.is_active }}
+                        <label class="form-check-label">{{ recipe_form.is_active.label }}</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header"><strong>Ingredients</strong></div>
+                <div class="card-body">
+                    {{ ingredient_formset.management_form }}
+                    <div id="ingredient-rows">
+                        {% for form in ingredient_formset %}
+                            <div class="row g-2 align-items-end border-bottom pb-2 mb-2 ingredient-row">
+                                {{ form.id }}
+                                <div class="col-md-4">
+                                    <label class="form-label small">Inventory Item</label>
+                                    {{ form.inventory_item }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Quantity</label>
+                                    {{ form.quantity }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Unit</label>
+                                    {{ form.unit }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Waste %</label>
+                                    {{ form.waste_percentage }}
+                                </div>
+                                <div class="col-md-1 form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label small">Active</label>
+                                </div>
+                                {% if form.instance.pk %}
+                                <div class="col-md-1 form-check">
+                                    {{ form.DELETE }}
+                                    <label class="form-check-label small text-danger">Remove</label>
+                                </div>
+                                {% endif %}
+                                {% for error in form.non_field_errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" id="add-ingredient-btn" class="btn btn-sm btn-outline-primary mt-2">+ Add Ingredient</button>
+                    <template id="ingredient-empty-form">
+                        <div class="row g-2 align-items-end border-bottom pb-2 mb-2 ingredient-row">
+                            {{ ingredient_formset.empty_form.id }}
+                            <div class="col-md-4">
+                                <label class="form-label small">Inventory Item</label>
+                                {{ ingredient_formset.empty_form.inventory_item }}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">Quantity</label>
+                                {{ ingredient_formset.empty_form.quantity }}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">Unit</label>
+                                {{ ingredient_formset.empty_form.unit }}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">Waste %</label>
+                                {{ ingredient_formset.empty_form.waste_percentage }}
+                            </div>
+                            <div class="col-md-1 form-check">
+                                {{ ingredient_formset.empty_form.is_active }}
+                                <label class="form-check-label small">Active</label>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header"><strong>Extra Costs</strong> <span class="text-muted small">(gas, packaging, overhead)</span></div>
+                <div class="card-body">
+                    {{ extra_cost_formset.management_form }}
+                    <div id="extra-rows">
+                        {% for form in extra_cost_formset %}
+                            <div class="row g-2 align-items-end border-bottom pb-2 mb-2 extra-row">
+                                {{ form.id }}
+                                <div class="col-md-6">
+                                    <label class="form-label small">Name</label>
+                                    {{ form.name }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Amount (per full batch)</label>
+                                    {{ form.amount }}
+                                </div>
+                                <div class="col-md-2 form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label small">Active</label>
+                                </div>
+                                {% if form.instance.pk %}
+                                <div class="col-md-1 form-check">
+                                    {{ form.DELETE }}
+                                    <label class="form-check-label small text-danger">Remove</label>
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" id="add-extra-btn" class="btn btn-sm btn-outline-primary mt-2">+ Add Extra Cost</button>
+                    <template id="extra-empty-form">
+                        <div class="row g-2 align-items-end border-bottom pb-2 mb-2 extra-row">
+                            {{ extra_cost_formset.empty_form.id }}
+                            <div class="col-md-6">
+                                <label class="form-label small">Name</label>
+                                {{ extra_cost_formset.empty_form.name }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Amount (per full batch)</label>
+                                {{ extra_cost_formset.empty_form.amount }}
+                            </div>
+                            <div class="col-md-2 form-check">
+                                {{ extra_cost_formset.empty_form.is_active }}
+                                <label class="form-check-label small">Active</label>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Recipe</button>
+        </form>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><strong>Cost Breakdown</strong></div>
+            <div class="card-body">
+                {% for line in breakdown %}
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>{{ line.label }}{% if line.quantity %} ({{ line.quantity }} {{ line.unit }}){% endif %}</span>
+                        <span>{{ line.cost }}</span>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small">No ingredients yet.</div>
+                {% endfor %}
+                <hr>
+                <div class="d-flex justify-content-between fw-bold">
+                    <span>Total batch cost</span>
+                    <span>{{ batch_cost }}</span>
+                </div>
+                <div class="d-flex justify-content-between fw-bold">
+                    <span>Cost per {{ recipe.yield_unit }}</span>
+                    <span>{{ cost_per_unit }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>Selling Price</span>
+                    <span>{{ product.selling_price }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Estimated Gross Profit</span>
+                    <span>{{ product.gross_profit }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Food Cost %</span>
+                    <span>{{ product.food_cost_percentage }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function wireAddFormButton(buttonId, rowsContainerId, emptyTemplateId, prefix) {
+    document.getElementById(buttonId).addEventListener('click', function () {
+        var totalFormsInput = document.getElementById('id_' + prefix + '-TOTAL_FORMS');
+        var formIndex = parseInt(totalFormsInput.value, 10);
+        var templateHtml = document.getElementById(emptyTemplateId).innerHTML;
+        var newRowHtml = templateHtml.split('__prefix__').join(formIndex);
+        document.getElementById(rowsContainerId).insertAdjacentHTML('beforeend', newRowHtml);
+        totalFormsInput.value = formIndex + 1;
+    });
+}
+wireAddFormButton('add-ingredient-btn', 'ingredient-rows', 'ingredient-empty-form', 'ingredients');
+wireAddFormButton('add-extra-btn', 'extra-rows', 'extra-empty-form', 'extras');
+</script>
+{% endblock %}

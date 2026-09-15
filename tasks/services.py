@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
+
 from accounts.models import AuditLog, CustomUser, JobPosition
 
 from .models import (

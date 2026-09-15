@@ -108,6 +108,7 @@ INSTALLED_APPS = [
     'inventory',
     'sales',
     'products',
+    'recipes',
     'customers',
     'rooms',
     'stays',
